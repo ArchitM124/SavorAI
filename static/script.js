@@ -351,7 +351,6 @@ function displayRecipes(recipes, inOverlay = true) {
         document.getElementById('recipeResults');
 
     if (!targetElement) return;
-
     targetElement.innerHTML = '';
 
     if (!recipes || recipes.length === 0) {
@@ -363,58 +362,131 @@ function displayRecipes(recipes, inOverlay = true) {
         return;
     }
 
-    recipes.forEach((recipe, index) => {
-        const recipeCard = document.createElement('div');
-        recipeCard.className = 'recipe-card';
-        recipeCard.innerHTML = `
-            <div class="card-body">
-                <h3>${recipe.name || 'Untitled Recipe'}</h3>
-                <div class="recipe-info">
-                    ${recipe.cooking_time ? `
-                    <span>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clock" viewBox="0 0 16 16">
-                            <path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/>
-                            <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/>
-                        </svg>
-                        ${recipe.cooking_time} mins
-                    </span>
-                    ` : ''}
-                    ${recipe.calories ? `
-                    <span>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-fire" viewBox="0 0 16 16">
-                            <path d="M8 16c3.314 0 6-2 6-5.5 0-1.5-.5-4-2.5-6 .25 1.5-1.25 2-1.25 2C11 4 9 .5 6 0c.357 2 .5 4-2 6-1.25 1-2 2.729-2 4.5C2 14 4.686 16 8 16Zm0-1c-1.657 0-3-1-3-2.75 0-.75.25-2 1.25-3C6.125 10 7 10.5 7 10.5c-.375-1.25.5-3.25 2-3.5-.179 1-.25 2 1 3 .625.5 1 1.364 1 2.25C11 14 9.657 15 8 15Z"/>
-                        </svg>
-                        ${recipe.calories} cal
-                    </span>
-                    ` : ''}
-                </div>
-                
-                <h6>Ingredients:</h6>
-                <ul class="ingredients-list">
-                    ${recipe.ingredients.map(ing => `<li>${ing}</li>`).join('')}
-                </ul>
-                
-                <h6>Instructions:</h6>
-                <ol class="cooking-steps">
-                    ${recipe.instructions.map(step => `<li>${step}</li>`).join('')}
-                </ol>
-            </div>
-        `;
-        targetElement.appendChild(recipeCard);
-    });
-
-    // Add "Load More" button if there are recipes
-    if (recipes.length > 0 && !inOverlay) {
-        const moreButton = document.createElement('button');
-        moreButton.className = 'btn btn-outline-primary w-100 mb-4';
-        moreButton.textContent = 'Load More Recipes';
-        moreButton.onclick = async () => {
-            moreButton.remove();
-            await handleFormSubmit(document.getElementById('ingredientForm'), true);
-        };
-        targetElement.appendChild(moreButton);
+    // For mobile, create pages of 3 recipes each
+    if (window.innerWidth <= 768) {
+        const recipesPerPage = 3;
+        const pages = Math.ceil(recipes.length / recipesPerPage);
+        
+        // Create container for pages
+        const pagesContainer = document.createElement('div');
+        pagesContainer.className = 'recipe-pages';
+        
+        // Split recipes into pages
+        for (let i = 0; i < pages; i++) {
+            const page = document.createElement('div');
+            page.className = `recipe-page ${i === 0 ? 'active' : ''}`;
+            page.dataset.page = i;
+            
+            const pageRecipes = recipes.slice(i * recipesPerPage, (i + 1) * recipesPerPage);
+            pageRecipes.forEach(recipe => {
+                const recipeCard = createRecipeCard(recipe);
+                page.appendChild(recipeCard);
+            });
+            
+            pagesContainer.appendChild(page);
+        }
+        
+        targetElement.appendChild(pagesContainer);
+        
+        // Add pagination if there are multiple pages
+        if (pages > 1) {
+            const pagination = document.createElement('div');
+            pagination.className = 'recipes-pagination';
+            
+            for (let i = 0; i < pages; i++) {
+                const pageButton = document.createElement('button');
+                pageButton.type = 'button';
+                pageButton.className = i === 0 ? 'active' : '';
+                pageButton.textContent = (i + 1).toString();
+                pageButton.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    // Update active page
+                    document.querySelectorAll('.recipe-page').forEach(p => p.classList.remove('active'));
+                    document.querySelector(`.recipe-page[data-page="${i}"]`).classList.add('active');
+                    
+                    // Update active button
+                    document.querySelectorAll('.recipes-pagination button').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                });
+                pagination.appendChild(pageButton);
+            }
+            
+            targetElement.appendChild(pagination);
+        }
+    } else {
+        // Desktop view - show all recipes
+        recipes.forEach(recipe => {
+            const recipeCard = createRecipeCard(recipe);
+            targetElement.appendChild(recipeCard);
+        });
     }
 }
+
+function createRecipeCard(recipe) {
+    const recipeCard = document.createElement('div');
+    recipeCard.className = 'recipe-card';
+    recipeCard.innerHTML = `
+        <div class="card-body">
+            <h3>${recipe.name || 'Untitled Recipe'}</h3>
+            <div class="recipe-info">
+                ${recipe.cooking_time ? `
+                <span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clock" viewBox="0 0 16 16">
+                        <path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/>
+                        <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/>
+                    </svg>
+                    ${recipe.cooking_time} mins
+                </span>
+                ` : ''}
+                ${recipe.calories ? `
+                <span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-fire" viewBox="0 0 16 16">
+                        <path d="M8 16c3.314 0 6-2 6-5.5 0-1.5-.5-4-2.5-6 .25 1.5-1.25 2-1.25 2C11 4 9 .5 6 0c.357 2 .5 4-2 6-1.25 1-2 2.729-2 4.5C2 14 4.686 16 8 16Zm0-1c-1.657 0-3-1-3-2.75 0-.75.25-2 1.25-3C6.125 10 7 10.5 7 10.5c-.375-1.25.5-3.25 2-3.5-.179 1-.25 2 1 3 .625.5 1 1.364 1 2.25C11 14 9.657 15 8 15Z"/>
+                    </svg>
+                    ${recipe.calories} cal
+                </span>
+                ` : ''}
+            </div>
+            
+            <h6>Ingredients:</h6>
+            <ul class="ingredients-list">
+                ${recipe.ingredients.map(ing => `<li>${ing}</li>`).join('')}
+            </ul>
+            
+            <h6>Instructions:</h6>
+            <ol class="cooking-steps">
+                ${recipe.instructions.map(step => `<li>${step}</li>`).join('')}
+            </ol>
+        </div>
+    `;
+    return recipeCard;
+}
+
+// Add touch event handlers to improve mobile interaction
+document.addEventListener('DOMContentLoaded', function() {
+    // Prevent double-tap zoom on buttons and form elements
+    document.querySelectorAll('.btn, .form-select, .form-control').forEach(element => {
+        element.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+            this.click();
+        }, { passive: false });
+    });
+
+    // Add active state handling
+    document.querySelectorAll('.btn').forEach(button => {
+        button.addEventListener('touchstart', function() {
+            this.classList.add('active');
+        });
+        
+        button.addEventListener('touchend', function() {
+            this.classList.remove('active');
+        });
+        
+        button.addEventListener('touchcancel', function() {
+            this.classList.remove('active');
+        });
+    });
+});
 
 // Add smooth scrolling to recipe results on mobile
 if (window.innerWidth <= 768) {

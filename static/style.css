@@ -512,4 +512,146 @@ body {
 #ingredientsList {
     display: flex;
     flex-direction: column-reverse;
+}
+
+/* Improve touch targets */
+.btn {
+    position: relative;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.btn::after {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    right: -10px;
+    bottom: -10px;
+    z-index: 1;
+}
+
+.btn * {
+    position: relative;
+    z-index: 2;
+}
+
+/* Remove double-tap requirement */
+@media (max-width: 768px) {
+    .btn:active {
+        transform: scale(0.98);
+    }
+
+    .form-control, .form-select, .btn {
+        font-size: 16px;
+        min-height: 48px;
+        touch-action: manipulation;
+    }
+    
+    .select-wrapper {
+        display: block;
+        width: 100%;
+        margin-bottom: 8px;
+    }
+    
+    .select-wrapper::before {
+        content: '';
+        position: absolute;
+        top: -10px;
+        left: -10px;
+        right: -10px;
+        bottom: -10px;
+        z-index: 1;
+    }
+    
+    .form-select {
+        position: relative;
+        z-index: 2;
+        padding: 12px 35px 12px 12px !important;
+        width: 100%;
+        -webkit-tap-highlight-color: transparent;
+    }
+    
+    .delete-ingredient {
+        width: 100%;
+        margin-top: 0.5rem;
+        min-height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 12px 20px;
+        touch-action: manipulation;
+    }
+    
+    #addIngredient {
+        min-height: 48px;
+        margin-bottom: 1rem;
+        padding: 12px 20px;
+        touch-action: manipulation;
+    }
+
+    /* Recipe pagination styles */
+    .recipes-pagination {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin: 20px 0;
+        padding: 10px;
+    }
+
+    .recipes-pagination button {
+        min-width: 40px;
+        height: 40px;
+        border-radius: 20px;
+        border: 1px solid #dee2e6;
+        background: white;
+        color: #0d6efd;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        touch-action: manipulation;
+    }
+
+    .recipes-pagination button.active {
+        background: #0d6efd;
+        color: white;
+        border-color: #0d6efd;
+    }
+
+    .recipes-container {
+        position: relative;
+    }
+
+    .recipe-page {
+        display: none;
+    }
+
+    .recipe-page.active {
+        display: block;
+    }
+
+    .recipe-card {
+        margin-bottom: 20px;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    /* Improve mobile touch targets */
+    .form-control:focus,
+    .form-select:focus,
+    .btn:focus {
+        outline: none;
+        box-shadow: none;
+    }
+
+    /* Remove hover states on mobile */
+    .btn:hover {
+        transform: none;
+    }
+
+    /* Add active states for better feedback */
+    .btn:active,
+    .form-select:active {
+        background-color: rgba(0,0,0,0.05);
+    }
 } 
