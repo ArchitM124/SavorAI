@@ -231,118 +231,140 @@ async function fetchAndDisplayRecipes(data) {
 
 // Function to display recipes
 function displayRecipes(recipes, append = false) {
-    debug('Displaying recipes:', recipes);
     const resultsDiv = document.getElementById('recipeResults');
-    if (!resultsDiv) {
-        console.error('Results div not found');
-        return;
-    }
-    
-    if (!append) {
-        resultsDiv.innerHTML = '';
-    }
+    resultsDiv.innerHTML = '';
 
     recipes.forEach((recipe, index) => {
         const recipeCard = document.createElement('div');
-        recipeCard.className = 'recipe-card';
+        recipeCard.className = 'recipe-card mb-3';
         
-        const cardBody = document.createElement('div');
-        cardBody.className = 'card-body';
-
-        // Recipe title
-        const title = document.createElement('h3');
-        title.textContent = recipe.name;
-        cardBody.appendChild(title);
-
-        // Recipe info (cooking time, servings, etc)
-        const recipeInfo = document.createElement('div');
-        recipeInfo.className = 'recipe-info';
+        // Create the preview section (always visible)
+        const preview = document.createElement('div');
+        preview.className = 'recipe-preview p-3 d-flex justify-content-between align-items-center';
+        preview.style.cursor = 'pointer';
         
-        if (recipe.cooking_time) {
-            const timeSpan = document.createElement('span');
-            timeSpan.innerHTML = `<svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                <path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/>
-                <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/>
-            </svg>${recipe.cooking_time} mins`;
-            recipeInfo.appendChild(timeSpan);
-        }
+        const previewLeft = document.createElement('div');
+        previewLeft.innerHTML = `
+            <h3 class="h5 mb-0">${recipe.name}</h3>
+            <div class="recipe-info mt-1">
+                <span class="text-muted">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="margin-right: 4px;">
+                        <path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/>
+                        <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/>
+                    </svg>${recipe.cooking_time} mins
+                </span>
+            </div>`;
+        preview.appendChild(previewLeft);
 
-        if (recipe.servings) {
-            const servingsSpan = document.createElement('span');
-            servingsSpan.innerHTML = `<svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                <path d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v13.5a.5.5 0 0 1-.777.416L8 13.101l-5.223 2.815A.5.5 0 0 1 2 15.5V2zm2-1a1 1 0 0 0-1 1v12.566l4.723-2.482a.5.5 0 0 1 .554 0L13 14.566V2a1 1 0 0 0-1-1H4z"/>
-            </svg>${recipe.servings} servings`;
-            recipeInfo.appendChild(servingsSpan);
-        }
+        const toggleButton = document.createElement('button');
+        toggleButton.className = 'btn btn-link text-decoration-none';
+        toggleButton.innerHTML = 'Show Details';
+        preview.appendChild(toggleButton);
 
-        cardBody.appendChild(recipeInfo);
+        // Create the details section (hidden by default)
+        const details = document.createElement('div');
+        details.className = 'recipe-details p-3 border-top d-none';
+        
+        // Add description if available
+        if (recipe.description) {
+            const description = document.createElement('p');
+            description.className = 'mb-3';
+            description.textContent = recipe.description;
+            details.appendChild(description);
+        }
 
         // Ingredients section
         const ingredientsTitle = document.createElement('h4');
         ingredientsTitle.textContent = 'Ingredients';
-        ingredientsTitle.className = 'mt-3 mb-2';
-        cardBody.appendChild(ingredientsTitle);
+        ingredientsTitle.className = 'h6 mb-2';
+        details.appendChild(ingredientsTitle);
 
         const ingredientsList = document.createElement('ul');
-        ingredientsList.className = 'ingredients-list';
+        ingredientsList.className = 'ingredients-list mb-3';
         recipe.ingredients.forEach(ingredient => {
             const li = document.createElement('li');
             li.textContent = ingredient;
             ingredientsList.appendChild(li);
         });
-        cardBody.appendChild(ingredientsList);
+        details.appendChild(ingredientsList);
 
         // Instructions section
         const instructionsTitle = document.createElement('h4');
         instructionsTitle.textContent = 'Instructions';
-        instructionsTitle.className = 'mt-3 mb-2';
-        cardBody.appendChild(instructionsTitle);
+        instructionsTitle.className = 'h6 mb-2';
+        details.appendChild(instructionsTitle);
 
         const instructionsList = document.createElement('ol');
-        instructionsList.className = 'instructions-list';
+        instructionsList.className = 'instructions-list mb-3';
         recipe.instructions.forEach(instruction => {
             const li = document.createElement('li');
             li.textContent = instruction;
             instructionsList.appendChild(li);
         });
-        cardBody.appendChild(instructionsList);
+        details.appendChild(instructionsList);
 
-        // Add the card body to the recipe card
-        recipeCard.appendChild(cardBody);
-        resultsDiv.appendChild(recipeCard);
+        // Nutrition section
+        const nutritionTitle = document.createElement('h4');
+        nutritionTitle.textContent = 'Nutrition Information';
+        nutritionTitle.className = 'h6 mb-2';
+        details.appendChild(nutritionTitle);
 
-        // Add touch-friendly expand/collapse for mobile
-        if (window.innerWidth <= 768) {
-            const preview = document.createElement('div');
-            preview.className = 'recipe-preview d-md-none';
-            preview.style.maxHeight = '150px';
-            preview.style.overflow = 'hidden';
-            preview.style.position = 'relative';
-            
-            const expandBtn = document.createElement('button');
-            expandBtn.className = 'btn btn-link text-decoration-none w-100 text-center py-2 mt-2';
-            expandBtn.innerHTML = 'Show More';
-            
-            let expanded = false;
-            expandBtn.addEventListener('click', () => {
-                if (expanded) {
-                    preview.style.maxHeight = '150px';
-                    expandBtn.innerHTML = 'Show More';
-                } else {
-                    preview.style.maxHeight = 'none';
-                    expandBtn.innerHTML = 'Show Less';
-                }
-                expanded = !expanded;
-            });
-            
-            // Move content to preview
-            while (cardBody.firstChild) {
-                preview.appendChild(cardBody.firstChild);
-            }
-            
-            cardBody.appendChild(preview);
-            cardBody.appendChild(expandBtn);
+        const nutritionInfo = document.createElement('div');
+        nutritionInfo.className = 'nutrition-info mb-3';
+        nutritionInfo.innerHTML = `
+            <div class="row g-2">
+                <div class="col-6 col-sm-3">
+                    <div class="p-2 border rounded text-center">
+                        <div class="small text-muted">Calories</div>
+                        <div class="fw-bold">${recipe.nutrition.calories}</div>
+                    </div>
+                </div>
+                <div class="col-6 col-sm-3">
+                    <div class="p-2 border rounded text-center">
+                        <div class="small text-muted">Protein</div>
+                        <div class="fw-bold">${recipe.nutrition.protein}g</div>
+                    </div>
+                </div>
+                <div class="col-6 col-sm-3">
+                    <div class="p-2 border rounded text-center">
+                        <div class="small text-muted">Carbs</div>
+                        <div class="fw-bold">${recipe.nutrition.carbs}g</div>
+                    </div>
+                </div>
+                <div class="col-6 col-sm-3">
+                    <div class="p-2 border rounded text-center">
+                        <div class="small text-muted">Fats</div>
+                        <div class="fw-bold">${recipe.nutrition.fats}g</div>
+                    </div>
+                </div>
+            </div>`;
+        details.appendChild(nutritionInfo);
+
+        // Goal alignment section
+        if (recipe.goal_alignment) {
+            const goalTitle = document.createElement('h4');
+            goalTitle.textContent = 'How This Recipe Supports Your Goal';
+            goalTitle.className = 'h6 mb-2';
+            details.appendChild(goalTitle);
+
+            const goalText = document.createElement('p');
+            goalText.className = 'mb-0';
+            goalText.textContent = recipe.goal_alignment;
+            details.appendChild(goalText);
         }
+
+        // Add click handler for toggling details
+        let isExpanded = false;
+        preview.addEventListener('click', () => {
+            isExpanded = !isExpanded;
+            details.classList.toggle('d-none');
+            toggleButton.innerHTML = isExpanded ? 'Hide Details' : 'Show Details';
+        });
+
+        // Add all elements to the card
+        recipeCard.appendChild(preview);
+        recipeCard.appendChild(details);
+        resultsDiv.appendChild(recipeCard);
     });
 
     // Add "Load More" button if there are more recipes
