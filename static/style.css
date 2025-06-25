@@ -286,14 +286,19 @@ body {
         color: #e0e0e0;
     }
     
+    .navbar {
+        background-color: #2d2d2d !important;
+    }
+    
     .card, .recipe-card {
         background-color: #2d2d2d;
         border-color: #404040;
     }
     
     .card-header {
-        background-color: #333333;
+        background-color: #333333 !important;
         border-bottom-color: #404040;
+        color: #e0e0e0;
     }
     
     .ingredient-entry {
@@ -309,6 +314,10 @@ body {
         background-color: #333333;
         border-color: #404040;
         color: #e0e0e0;
+    }
+    
+    .form-control::placeholder {
+        color: #888888;
     }
     
     .form-control:focus, .form-select:focus {
@@ -330,20 +339,54 @@ body {
         background-color: #ff6b6b;
         color: #ffffff;
     }
+
+    .btn-outline-primary {
+        color: #5b9eff;
+        border-color: #5b9eff;
+    }
+
+    .btn-outline-primary:hover {
+        background-color: #5b9eff;
+        color: #ffffff;
+    }
+
+    .btn-primary {
+        background-color: #5b9eff;
+        border-color: #5b9eff;
+    }
+
+    .btn-primary:hover {
+        background-color: #4a8bff;
+        border-color: #4a8bff;
+    }
     
     #loadingIndicator {
         background-color: #2d2d2d;
+        color: #e0e0e0;
+    }
+    
+    .input-group-text {
+        background-color: #333333;
+        border-color: #404040;
+        color: #e0e0e0;
     }
     
     @media (max-width: 768px) {
         .delete-ingredient {
             background-color: #3d2c2c;
             border-color: #5c3939;
+            color: #ff6b6b;
         }
         
         .delete-ingredient:hover {
             background-color: #ff6b6b;
             border-color: #ff6b6b;
+            color: #ffffff;
+        }
+
+        .ingredient-entry {
+            background-color: #2d2d2d;
+            border-color: #404040;
         }
     }
 } 
