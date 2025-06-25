@@ -144,6 +144,42 @@ body {
     padding: 1rem;
 }
 
+/* Form styles */
+.form-control, .form-select {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
+}
+
+/* Ingredient entry styles */
+.ingredient-entry {
+    background: white;
+    border-radius: 12px;
+    transition: all 0.2s ease;
+}
+
+.ingredient-entry:hover {
+    background: #f8f9fa;
+}
+
+.ingredient-entry .form-control,
+.ingredient-entry .form-select {
+    background-color: white;
+}
+
+.delete-ingredient {
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+/* Mobile specific styles */
 @media (max-width: 768px) {
     .container-fluid {
         padding: 0.5rem;
@@ -155,6 +191,40 @@ body {
     
     .form-control, .form-select, .btn {
         font-size: 16px; /* Prevents zoom on iOS */
+    }
+    
+    .ingredient-entry {
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border: 1px solid #dee2e6;
+    }
+    
+    .ingredient-entry .row {
+        --bs-gutter-y: 0.75rem;
+    }
+    
+    .ingredient-entry input,
+    .ingredient-entry select {
+        height: 48px; /* Larger touch targets */
+    }
+    
+    .delete-ingredient {
+        margin-top: 0.5rem;
+        width: 100%;
+        background-color: #fff1f0;
+        border-color: #ffcdd2;
+        color: #dc3545;
+    }
+    
+    .delete-ingredient:hover {
+        background-color: #dc3545;
+        border-color: #dc3545;
+        color: white;
+    }
+    
+    #addIngredient {
+        height: 48px;
+        margin-top: 1rem;
     }
     
     .recipe-card {
@@ -187,12 +257,19 @@ body {
     }
 }
 
+/* Sticky form on desktop */
 @media (min-width: 992px) {
     .card.sticky-top {
         top: 1rem;
     }
+    
+    .ingredient-entry {
+        padding: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
 }
 
+/* Dark mode support */
 @media (prefers-color-scheme: dark) {
     body {
         background-color: #1a1a1a;
@@ -207,6 +284,15 @@ body {
     .card-header {
         background-color: #333333;
         border-bottom-color: #404040;
+    }
+    
+    .ingredient-entry {
+        background-color: #2d2d2d;
+        border-color: #404040;
+    }
+    
+    .ingredient-entry:hover {
+        background-color: #333333;
     }
     
     .form-control, .form-select {
@@ -237,5 +323,17 @@ body {
     
     #loadingIndicator {
         background-color: #2d2d2d;
+    }
+    
+    @media (max-width: 768px) {
+        .delete-ingredient {
+            background-color: #3d2c2c;
+            border-color: #5c3939;
+        }
+        
+        .delete-ingredient:hover {
+            background-color: #ff6b6b;
+            border-color: #ff6b6b;
+        }
     }
 } 

@@ -3,9 +3,24 @@ import openai
 from dotenv import load_dotenv
 import os
 import json
-from typing import Dict, Any, Union, List, Tuple
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
+from typing import Dict, Any, Union, List, Tuple, Callable, Optional
+
+# Import Flask-Limiter with proper type handling
+try:
+    from flask_limiter import Limiter
+    from flask_limiter.util import get_remote_address
+except ImportError:
+    print("Warning: Flask-Limiter not installed. Rate limiting will not work.")
+    # Define base class for type compatibility
+    class LimiterBase:
+        def __init__(self, **kwargs): pass
+        def limit(self, *args, **kwargs) -> Callable: return lambda x: x
+        def exempt(self, *args, **kwargs) -> Callable: return lambda x: x
+        def get_limits_for_context(self, *args) -> Optional[List[str]]: return None
+        def get_window_stats(self, *args) -> Optional[Dict[str, Any]]: return None
+    
+    Limiter = LimiterBase  # type: ignore
+    def get_remote_address() -> str: return "127.0.0.1"
 
 # Load environment variables
 load_dotenv()
@@ -22,7 +37,7 @@ limiter = Limiter(
     app=app,
     key_func=get_remote_address,
     default_limits=["50 per day", "5 per hour"],
-    storage_uri=os.getenv('REDIS_URL', 'redis://localhost:6379')  # Use Redis for storage
+    storage_uri="memory://"  # Use simple memory storage
 )
 
 # Error handler for rate limiting
@@ -164,11 +179,13 @@ def get_recipes():
 @limiter.exempt
 def get_rate_limit():
     try:
-        # Get the current limits for the user
-        limits = limiter.get_limits_for_context(get_remote_address())
+        # Basic rate limit info
+        limits = getattr(limiter, 'get_limits_for_context', lambda x: ["Unknown"])(get_remote_address())
+        stats = getattr(limiter, 'get_window_stats', lambda x: {"remaining": "Unknown"})(get_remote_address())
+        
         return jsonify({
             "limits": str(limits),
-            "remaining": str(limiter.get_window_stats(get_remote_address()))
+            "remaining": str(stats)
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
