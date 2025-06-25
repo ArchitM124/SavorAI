@@ -23,24 +23,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const ingredientsList = document.getElementById('ingredientsList');
     const addIngredientBtn = document.getElementById('addIngredient');
     const loadingIndicator = document.getElementById('loadingIndicator');
-    const recipeModal = new bootstrap.Modal(document.getElementById('recipeModal'));
     const mealTypeSelect = document.getElementById('mealType');
+    const recipesOverlay = document.getElementById('recipesOverlay');
+    const closeRecipesBtn = document.getElementById('closeRecipes');
+    const overlayRecipeResults = document.getElementById('overlayRecipeResults');
 
     debug('Elements initialized');
 
-    // Get the template for new ingredients
-    const templateEntry = document.querySelector('.ingredient-entry');
-
-    // Add click handler for delete buttons
-    document.body.addEventListener('click', function(e) {
-        debug('Click event:', e.target);
-        if (e.target.classList.contains('delete-ingredient')) {
-            debug('Delete button clicked');
-            const entry = e.target.closest('.ingredient-entry');
-            if (entry && document.querySelectorAll('.ingredient-entry').length > 1) {
-                entry.remove();
-            }
-        }
+    // Close recipes overlay
+    closeRecipesBtn.addEventListener('click', function() {
+        recipesOverlay.classList.remove('active');
+        document.body.style.overflow = '';
     });
 
     // Add ingredient entry
@@ -90,8 +83,9 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
         debug('Form submitted');
 
-        // Show loading indicator
+        // Show loading indicator and prevent interaction
         loadingIndicator.classList.remove('d-none');
+        document.body.style.overflow = 'hidden';
 
         try {
             const ingredients = Array.from(document.querySelectorAll('.ingredient-entry')).map(entry => {
@@ -128,7 +122,18 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             const result = await response.json();
-            displayRecipes(result.recipes || []);
+            
+            // Clear any existing error messages
+            const errorDiv = document.getElementById('errorMessage');
+            if (errorDiv) {
+                errorDiv.remove();
+            }
+
+            // Display recipes in the overlay
+            displayRecipes(result.recipes || [], true);
+            
+            // Show the recipes overlay
+            recipesOverlay.classList.add('active');
         } catch (error) {
             debug('Error:', error);
             let errorDiv = document.getElementById('errorMessage');
@@ -136,14 +141,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 errorDiv = document.createElement('div');
                 errorDiv.id = 'errorMessage';
                 errorDiv.className = 'alert alert-danger mt-3';
-                document.getElementById('recipeResults').prepend(errorDiv);
+                overlayRecipeResults.prepend(errorDiv);
             }
             errorDiv.textContent = error.message;
             
-            // Scroll to error message
-            errorDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            // Show error in overlay
+            recipesOverlay.classList.add('active');
         } finally {
             loadingIndicator.classList.add('d-none');
+            document.body.style.overflow = 'hidden'; // Keep scroll locked if showing recipes
         }
     });
 
@@ -309,138 +315,74 @@ async function fetchAndDisplayRecipes(data) {
 }
 
 // Function to display recipes
-function displayRecipes(recipes, append = false) {
-    debug('Displaying recipes:', recipes);
-    const resultsDiv = document.getElementById('recipeResults');
-    if (!resultsDiv) {
-        console.error('Results div not found');
+function displayRecipes(recipes, inOverlay = true) {
+    const targetElement = inOverlay ? 
+        document.getElementById('overlayRecipeResults') : 
+        document.getElementById('recipeResults');
+
+    if (!targetElement) return;
+
+    targetElement.innerHTML = '';
+
+    if (!recipes || recipes.length === 0) {
+        targetElement.innerHTML = `
+            <div class="alert alert-info">
+                No recipes found. Try adjusting your ingredients or meal type.
+            </div>
+        `;
         return;
-    }
-    
-    if (!append) {
-        resultsDiv.innerHTML = '';
     }
 
     recipes.forEach((recipe, index) => {
         const recipeCard = document.createElement('div');
         recipeCard.className = 'recipe-card';
-        
-        const cardBody = document.createElement('div');
-        cardBody.className = 'card-body';
-
-        // Recipe title
-        const title = document.createElement('h3');
-        title.textContent = recipe.name;
-        cardBody.appendChild(title);
-
-        // Recipe info (cooking time, servings, etc)
-        const recipeInfo = document.createElement('div');
-        recipeInfo.className = 'recipe-info';
-        
-        if (recipe.cooking_time) {
-            const timeSpan = document.createElement('span');
-            timeSpan.innerHTML = `<svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                <path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/>
-                <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/>
-            </svg>${recipe.cooking_time} mins`;
-            recipeInfo.appendChild(timeSpan);
-        }
-
-        if (recipe.servings) {
-            const servingsSpan = document.createElement('span');
-            servingsSpan.innerHTML = `<svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                <path d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v13.5a.5.5 0 0 1-.777.416L8 13.101l-5.223 2.815A.5.5 0 0 1 2 15.5V2zm2-1a1 1 0 0 0-1 1v12.566l4.723-2.482a.5.5 0 0 1 .554 0L13 14.566V2a1 1 0 0 0-1-1H4z"/>
-            </svg>${recipe.servings} servings`;
-            recipeInfo.appendChild(servingsSpan);
-        }
-
-        cardBody.appendChild(recipeInfo);
-
-        // Ingredients section
-        const ingredientsTitle = document.createElement('h4');
-        ingredientsTitle.textContent = 'Ingredients';
-        ingredientsTitle.className = 'mt-3 mb-2';
-        cardBody.appendChild(ingredientsTitle);
-
-        const ingredientsList = document.createElement('ul');
-        ingredientsList.className = 'ingredients-list';
-        recipe.ingredients.forEach(ingredient => {
-            const li = document.createElement('li');
-            li.textContent = ingredient;
-            ingredientsList.appendChild(li);
-        });
-        cardBody.appendChild(ingredientsList);
-
-        // Instructions section
-        const instructionsTitle = document.createElement('h4');
-        instructionsTitle.textContent = 'Instructions';
-        instructionsTitle.className = 'mt-3 mb-2';
-        cardBody.appendChild(instructionsTitle);
-
-        const instructionsList = document.createElement('ol');
-        instructionsList.className = 'instructions-list';
-        recipe.instructions.forEach(instruction => {
-            const li = document.createElement('li');
-            li.textContent = instruction;
-            instructionsList.appendChild(li);
-        });
-        cardBody.appendChild(instructionsList);
-
-        // Add the card body to the recipe card
-        recipeCard.appendChild(cardBody);
-        resultsDiv.appendChild(recipeCard);
-
-        // Add touch-friendly expand/collapse for mobile
-        if (window.innerWidth <= 768) {
-            const preview = document.createElement('div');
-            preview.className = 'recipe-preview d-md-none';
-            preview.style.maxHeight = '150px';
-            preview.style.overflow = 'hidden';
-            preview.style.position = 'relative';
-            
-            const expandBtn = document.createElement('button');
-            expandBtn.className = 'btn btn-link text-decoration-none w-100 text-center py-2 mt-2';
-            expandBtn.innerHTML = 'Show More';
-            
-            let expanded = false;
-            expandBtn.addEventListener('click', () => {
-                if (expanded) {
-                    preview.style.maxHeight = '150px';
-                    expandBtn.innerHTML = 'Show More';
-                } else {
-                    preview.style.maxHeight = 'none';
-                    expandBtn.innerHTML = 'Show Less';
-                }
-                expanded = !expanded;
-            });
-            
-            // Move content to preview
-            while (cardBody.firstChild) {
-                preview.appendChild(cardBody.firstChild);
-            }
-            
-            cardBody.appendChild(preview);
-            cardBody.appendChild(expandBtn);
-        }
+        recipeCard.innerHTML = `
+            <div class="card-body">
+                <h3>${recipe.name || 'Untitled Recipe'}</h3>
+                <div class="recipe-info">
+                    ${recipe.cooking_time ? `
+                    <span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clock" viewBox="0 0 16 16">
+                            <path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/>
+                            <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/>
+                        </svg>
+                        ${recipe.cooking_time} mins
+                    </span>
+                    ` : ''}
+                    ${recipe.calories ? `
+                    <span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-fire" viewBox="0 0 16 16">
+                            <path d="M8 16c3.314 0 6-2 6-5.5 0-1.5-.5-4-2.5-6 .25 1.5-1.25 2-1.25 2C11 4 9 .5 6 0c.357 2 .5 4-2 6-1.25 1-2 2.729-2 4.5C2 14 4.686 16 8 16Zm0-1c-1.657 0-3-1-3-2.75 0-.75.25-2 1.25-3C6.125 10 7 10.5 7 10.5c-.375-1.25.5-3.25 2-3.5-.179 1-.25 2 1 3 .625.5 1 1.364 1 2.25C11 14 9.657 15 8 15Z"/>
+                        </svg>
+                        ${recipe.calories} cal
+                    </span>
+                    ` : ''}
+                </div>
+                
+                <h6>Ingredients:</h6>
+                <ul class="ingredients-list">
+                    ${recipe.ingredients.map(ing => `<li>${ing}</li>`).join('')}
+                </ul>
+                
+                <h6>Instructions:</h6>
+                <ol class="cooking-steps">
+                    ${recipe.instructions.map(step => `<li>${step}</li>`).join('')}
+                </ol>
+            </div>
+        `;
+        targetElement.appendChild(recipeCard);
     });
 
-    // Add "Load More" button if there are more recipes
-    if (recipes.length === 5) {
-        const loadMoreBtn = document.createElement('button');
-        loadMoreBtn.className = 'btn btn-outline-primary w-100 mt-3';
-        loadMoreBtn.textContent = 'Load More Recipes';
-        loadMoreBtn.onclick = () => {
-            const currentIngredients = Array.from(document.querySelectorAll('.ingredient-entry')).map(entry => {
-                return {
-                    name: entry.querySelector('input').value,
-                    quantity: entry.querySelector('.quantity-select').value,
-                    unit: entry.querySelector('.unit-select').value
-                };
-            }).filter(ing => ing.name.trim() !== '');
-
-            handleFormSubmit(document.getElementById('ingredientForm'), true);
+    // Add "Load More" button if there are recipes
+    if (recipes.length > 0 && !inOverlay) {
+        const moreButton = document.createElement('button');
+        moreButton.className = 'btn btn-outline-primary w-100 mb-4';
+        moreButton.textContent = 'Load More Recipes';
+        moreButton.onclick = async () => {
+            moreButton.remove();
+            await handleFormSubmit(document.getElementById('ingredientForm'), true);
         };
-        resultsDiv.appendChild(loadMoreBtn);
+        targetElement.appendChild(moreButton);
     }
 }
 
