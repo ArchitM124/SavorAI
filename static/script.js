@@ -24,6 +24,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const addIngredientBtn = document.getElementById('addIngredient');
     const loadingIndicator = document.getElementById('loadingIndicator');
     const recipeModal = new bootstrap.Modal(document.getElementById('recipeModal'));
+    const mealTypeSelect = document.getElementById('mealType');
 
     debug('Add ingredient button:', addIngredientBtn);
     debug('Ingredients list:', ingredientsList);
@@ -44,28 +45,38 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Add ingredient entry
-    addIngredientBtn.addEventListener('click', function(e) {
+    addIngredientBtn.addEventListener('click', function() {
         debug('Add ingredient button clicked');
-        e.preventDefault();
-        e.stopPropagation();
+        const template = document.querySelector('.ingredient-entry');
+        const newEntry = template.cloneNode(true);
+        
+        // Clear all inputs in the new entry
+        newEntry.querySelectorAll('input, select').forEach(input => {
+            input.value = '';
+        });
+        
+        // Ensure the new entry is visible
+        newEntry.style.display = '';
+        ingredientsList.appendChild(newEntry);
+        
+        // Focus the new ingredient input
+        const newInput = newEntry.querySelector('input[type="text"]');
+        if (newInput) {
+            newInput.focus();
+        }
+    });
 
-        // Get the first ingredient entry
-        const firstEntry = document.querySelector('.ingredient-entry');
-        debug('First entry:', firstEntry);
-
-        if (firstEntry) {
-            // Clone the entry
-            const newEntry = firstEntry.cloneNode(true);
-            debug('New entry created');
-
-            // Clear the values
-            newEntry.querySelectorAll('input, select').forEach(input => {
-                input.value = '';
-            });
-
-            // Add to the list
-            ingredientsList.appendChild(newEntry);
-            debug('New entry added');
+    // Handle ingredient removal
+    ingredientsList.addEventListener('click', function(e) {
+        const deleteBtn = e.target.closest('.delete-ingredient');
+        if (deleteBtn) {
+            debug('Delete button clicked');
+            const entry = deleteBtn.closest('.ingredient-entry');
+            const allEntries = document.querySelectorAll('.ingredient-entry');
+            
+            if (entry && allEntries.length > 1) {
+                entry.remove();
+            }
         }
     });
 
@@ -74,6 +85,13 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
         await handleFormSubmit(form);
     });
+
+    // Ensure meal type dropdown works
+    if (mealTypeSelect) {
+        mealTypeSelect.addEventListener('change', function() {
+            debug('Meal type changed:', this.value);
+        });
+    }
 
     debug('Script initialization complete');
 });

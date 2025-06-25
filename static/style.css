@@ -1,30 +1,39 @@
 body {
-    background-color: #f8f9fa;
+    background-color: #ffffff;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     min-height: 100vh;
+    color: #333;
 }
 
 .navbar {
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    background-color: #0d6efd !important;
 }
 
 .card {
-    border: none;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border: 1px solid #e9ecef;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     margin-bottom: 20px;
+    background-color: #ffffff;
 }
 
 .card-header {
-    background-color: #fff;
-    border-bottom: 1px solid rgba(0,0,0,0.1);
+    background-color: #ffffff;
+    border-bottom: 1px solid #e9ecef;
 }
 
 .ingredient-entry {
     transition: all 0.3s ease;
+    background-color: #ffffff;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
 }
 
 .ingredient-entry:hover {
     transform: translateX(5px);
+    background-color: #f8f9fa;
 }
 
 .remove-ingredient {
@@ -32,9 +41,10 @@ body {
 }
 
 .recipe-card {
-    background: white;
+    background: #ffffff;
+    border: 1px solid #e9ecef;
     border-radius: 12px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     margin-bottom: 1.5rem;
     overflow: hidden;
     transition: transform 0.2s;
@@ -100,8 +110,8 @@ body {
     transform: translateY(-50%);
     width: 30px;
     height: 30px;
-    background-color: #007bff;
-    color: white;
+    background-color: #0d6efd;
+    color: #ffffff;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -116,7 +126,7 @@ body {
     left: 50%;
     transform: translate(-50%, -50%);
     z-index: 1000;
-    background: rgba(255,255,255,0.9);
+    background: rgba(255,255,255,0.95);
     padding: 2rem;
     border-radius: 12px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
@@ -146,22 +156,19 @@ body {
 
 /* Form styles */
 .form-control, .form-select {
-    border: 1px solid #dee2e6;
+    border: 1px solid #ced4da;
     border-radius: 8px;
+    background-color: #ffffff;
+    color: #333;
 }
 
 .form-control:focus, .form-select:focus {
     border-color: #80bdff;
-    box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
+    box-shadow: 0 0 0 0.2rem rgba(13,110,253,0.25);
+    background-color: #ffffff;
 }
 
 /* Ingredient entry styles */
-.ingredient-entry {
-    background: white;
-    border-radius: 12px;
-    transition: all 0.2s ease;
-}
-
 .ingredient-entry:hover {
     background: #f8f9fa;
 }
@@ -182,88 +189,50 @@ body {
 /* Mobile specific styles */
 @media (max-width: 768px) {
     .container-fluid {
-        padding: 0.5rem;
+        padding: 0.75rem;
     }
     
     .card {
         margin-bottom: 1rem;
+        border-radius: 12px;
     }
     
     .form-control, .form-select, .btn {
-        font-size: 16px; /* Prevents zoom on iOS */
+        font-size: 16px;
+        height: 48px;
     }
     
     .ingredient-entry {
         padding: 1rem;
         margin-bottom: 1rem;
-        border: 1px solid #dee2e6;
+        border: 1px solid #e9ecef;
     }
     
     .ingredient-entry .row {
-        --bs-gutter-y: 0.75rem;
-    }
-    
-    .ingredient-entry input,
-    .ingredient-entry select {
-        height: 48px; /* Larger touch targets */
-        font-size: 16px;
-    }
-
-    /* Make ingredient name input more prominent */
-    .ingredient-entry input[type="text"] {
-        height: 56px;
-        font-size: 18px;
-        padding: 0.75rem 1rem;
         margin-bottom: 0.5rem;
     }
     
     .delete-ingredient {
-        margin-top: 0.5rem;
         width: 100%;
-        background-color: #fff1f0;
-        border-color: #ffcdd2;
-        color: #dc3545;
+        margin-top: 0.5rem;
         height: 48px;
-    }
-    
-    .delete-ingredient:hover {
-        background-color: #dc3545;
-        border-color: #dc3545;
-        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
     
     #addIngredient {
         height: 48px;
-        margin-top: 1rem;
-    }
-    
-    .recipe-card {
         margin-bottom: 1rem;
     }
     
-    .recipe-info {
-        font-size: 0.85rem;
-        gap: 0.75rem;
+    .form-label {
+        margin-bottom: 0.5rem;
+        font-weight: 500;
     }
     
-    #loadingIndicator {
-        width: 90%;
-        max-width: 320px;
-    }
-    
-    .ingredient-entry {
-        margin-bottom: 0.75rem !important;
-    }
-    
-    /* Improve touch targets */
-    .btn {
-        padding: 0.625rem 1rem;
-        min-height: 44px;
-    }
-    
-    .delete-ingredient {
-        padding: 0.5rem 0.75rem !important;
-        min-width: 44px;
+    .text-muted {
+        color: #6c757d !important;
     }
 }
 
@@ -279,114 +248,26 @@ body {
     }
 }
 
-/* Dark mode support */
+/* Remove dark mode styles */
 @media (prefers-color-scheme: dark) {
+    /* Override dark mode with light theme */
     body {
-        background-color: #1a1a1a;
-        color: #e0e0e0;
+        background-color: #ffffff;
+        color: #333;
     }
     
-    .navbar {
-        background-color: #2d2d2d !important;
-    }
-    
-    .card, .recipe-card {
-        background-color: #2d2d2d;
-        border-color: #404040;
-    }
-    
-    .card-header {
-        background-color: #333333 !important;
-        border-bottom-color: #404040;
-        color: #e0e0e0;
-    }
-    
-    .ingredient-entry {
-        background-color: #2d2d2d;
-        border-color: #404040;
-    }
-    
-    .ingredient-entry:hover {
-        background-color: #333333;
+    .card, .recipe-card, .ingredient-entry {
+        background-color: #ffffff;
+        border-color: #e9ecef;
     }
     
     .form-control, .form-select {
-        background-color: #333333;
-        border-color: #404040;
-        color: #e0e0e0;
-    }
-    
-    .form-control::placeholder {
-        color: #888888;
-    }
-    
-    .form-control:focus, .form-select:focus {
-        background-color: #404040;
-        border-color: #666666;
-        color: #ffffff;
+        background-color: #ffffff;
+        color: #333;
+        border-color: #ced4da;
     }
     
     .text-muted {
-        color: #b0b0b0 !important;
-    }
-    
-    .btn-outline-danger {
-        color: #ff6b6b;
-        border-color: #ff6b6b;
-    }
-    
-    .btn-outline-danger:hover {
-        background-color: #ff6b6b;
-        color: #ffffff;
-    }
-
-    .btn-outline-primary {
-        color: #5b9eff;
-        border-color: #5b9eff;
-    }
-
-    .btn-outline-primary:hover {
-        background-color: #5b9eff;
-        color: #ffffff;
-    }
-
-    .btn-primary {
-        background-color: #5b9eff;
-        border-color: #5b9eff;
-    }
-
-    .btn-primary:hover {
-        background-color: #4a8bff;
-        border-color: #4a8bff;
-    }
-    
-    #loadingIndicator {
-        background-color: #2d2d2d;
-        color: #e0e0e0;
-    }
-    
-    .input-group-text {
-        background-color: #333333;
-        border-color: #404040;
-        color: #e0e0e0;
-    }
-    
-    @media (max-width: 768px) {
-        .delete-ingredient {
-            background-color: #3d2c2c;
-            border-color: #5c3939;
-            color: #ff6b6b;
-        }
-        
-        .delete-ingredient:hover {
-            background-color: #ff6b6b;
-            border-color: #ff6b6b;
-            color: #ffffff;
-        }
-
-        .ingredient-entry {
-            background-color: #2d2d2d;
-            border-color: #404040;
-        }
+        color: #6c757d !important;
     }
 } 
