@@ -26,8 +26,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const recipeModal = new bootstrap.Modal(document.getElementById('recipeModal'));
     const mealTypeSelect = document.getElementById('mealType');
 
-    debug('Add ingredient button:', addIngredientBtn);
-    debug('Ingredients list:', ingredientsList);
+    debug('Elements initialized');
 
     // Get the template for new ingredients
     const templateEntry = document.querySelector('.ingredient-entry');
@@ -48,6 +47,8 @@ document.addEventListener('DOMContentLoaded', function() {
     addIngredientBtn.addEventListener('click', function() {
         debug('Add ingredient button clicked');
         const template = document.querySelector('.ingredient-entry');
+        if (!template) return;
+
         const newEntry = template.cloneNode(true);
         
         // Clear all inputs in the new entry
@@ -55,12 +56,15 @@ document.addEventListener('DOMContentLoaded', function() {
             input.value = '';
         });
         
-        // Ensure the new entry is visible
-        newEntry.style.display = '';
-        ingredientsList.appendChild(newEntry);
+        // Add the new entry at the beginning of the list
+        if (ingredientsList.firstChild) {
+            ingredientsList.insertBefore(newEntry, ingredientsList.firstChild);
+        } else {
+            ingredientsList.appendChild(newEntry);
+        }
         
         // Focus the new ingredient input
-        const newInput = newEntry.querySelector('input[type="text"]');
+        const newInput = newEntry.querySelector('.ingredient-name');
         if (newInput) {
             newInput.focus();
         }
@@ -69,21 +73,78 @@ document.addEventListener('DOMContentLoaded', function() {
     // Handle ingredient removal
     ingredientsList.addEventListener('click', function(e) {
         const deleteBtn = e.target.closest('.delete-ingredient');
-        if (deleteBtn) {
-            debug('Delete button clicked');
-            const entry = deleteBtn.closest('.ingredient-entry');
-            const allEntries = document.querySelectorAll('.ingredient-entry');
-            
-            if (entry && allEntries.length > 1) {
-                entry.remove();
-            }
+        if (!deleteBtn) return;
+        
+        debug('Delete button clicked');
+        const entries = document.querySelectorAll('.ingredient-entry');
+        if (entries.length <= 1) return; // Keep at least one entry
+        
+        const entry = deleteBtn.closest('.ingredient-entry');
+        if (entry) {
+            entry.remove();
         }
     });
 
     // Handle form submission
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
-        await handleFormSubmit(form);
+        debug('Form submitted');
+
+        // Show loading indicator
+        loadingIndicator.classList.remove('d-none');
+
+        try {
+            const ingredients = Array.from(document.querySelectorAll('.ingredient-entry')).map(entry => {
+                return {
+                    name: entry.querySelector('.ingredient-name').value.trim(),
+                    quantity: entry.querySelector('.quantity-select').value,
+                    unit: entry.querySelector('.unit-select').value
+                };
+            }).filter(ing => ing.name !== '');
+
+            const data = {
+                fitness_goal: document.getElementById('fitnessGoal').value.trim(),
+                meal_type: mealTypeSelect.value,
+                ingredients: ingredients,
+                max_cooking_time: document.getElementById('cookingTime').value || null
+            };
+
+            debug('Submitting data:', data);
+
+            const response = await fetch('/get_recipes', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                if (response.status === 429) {
+                    throw new Error(`Rate limit exceeded. Please try again in a few minutes.`);
+                }
+                throw new Error(errorData.error || 'Failed to get recipes');
+            }
+
+            const result = await response.json();
+            displayRecipes(result.recipes || []);
+        } catch (error) {
+            debug('Error:', error);
+            let errorDiv = document.getElementById('errorMessage');
+            if (!errorDiv) {
+                errorDiv = document.createElement('div');
+                errorDiv.id = 'errorMessage';
+                errorDiv.className = 'alert alert-danger mt-3';
+                document.getElementById('recipeResults').prepend(errorDiv);
+            }
+            errorDiv.textContent = error.message;
+            
+            // Scroll to error message
+            errorDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } finally {
+            loadingIndicator.classList.add('d-none');
+        }
     });
 
     // Ensure meal type dropdown works

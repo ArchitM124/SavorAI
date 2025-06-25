@@ -44,8 +44,8 @@
 
                             <div class="mb-4">
                                 <label for="cookingTime" class="form-label">Maximum Cooking Time (Optional)</label>
-                                <div class="input-group input-group-lg">
-                                    <input type="number" class="form-control" id="cookingTime" min="5" max="240" placeholder="e.g., 30">
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="cookingTime" min="5" max="240" placeholder="e.g., 30" style="max-width: 120px;">
                                     <span class="input-group-text">minutes</span>
                                 </div>
                                 <small class="text-muted">Leave empty if time is not a constraint</small>
@@ -58,33 +58,37 @@
                                     <div class="ingredient-entry">
                                         <div class="row g-2">
                                             <div class="col-12">
-                                                <input type="text" class="form-control form-control-lg" placeholder="Enter ingredient name" required>
+                                                <input type="text" class="form-control form-control-lg ingredient-name" placeholder="Enter ingredient name" required>
                                             </div>
                                             <div class="col-6">
-                                                <select class="form-select form-select-lg quantity-select">
-                                                    <option value="">Quantity</option>
-                                                    <option value="0.25">1/4</option>
-                                                    <option value="0.5">1/2</option>
-                                                    <option value="0.75">3/4</option>
-                                                    <option value="1">1</option>
-                                                    <option value="2">2</option>
-                                                    <option value="3">3</option>
-                                                    <option value="4">4</option>
-                                                    <option value="5">5</option>
-                                                </select>
+                                                <div class="select-wrapper">
+                                                    <select class="form-select form-select-lg quantity-select">
+                                                        <option value="">Quantity</option>
+                                                        <option value="0.25">1/4</option>
+                                                        <option value="0.5">1/2</option>
+                                                        <option value="0.75">3/4</option>
+                                                        <option value="1">1</option>
+                                                        <option value="2">2</option>
+                                                        <option value="3">3</option>
+                                                        <option value="4">4</option>
+                                                        <option value="5">5</option>
+                                                    </select>
+                                                </div>
                                             </div>
                                             <div class="col-6">
-                                                <select class="form-select form-select-lg unit-select">
-                                                    <option value="">Unit</option>
-                                                    <option value="cup">cup</option>
-                                                    <option value="tbsp">tbsp</option>
-                                                    <option value="tsp">tsp</option>
-                                                    <option value="oz">oz</option>
-                                                    <option value="lb">lb</option>
-                                                    <option value="g">g</option>
-                                                    <option value="ml">ml</option>
-                                                    <option value="piece">piece</option>
-                                                </select>
+                                                <div class="select-wrapper">
+                                                    <select class="form-select form-select-lg unit-select">
+                                                        <option value="">Unit</option>
+                                                        <option value="cup">cup</option>
+                                                        <option value="tbsp">tbsp</option>
+                                                        <option value="tsp">tsp</option>
+                                                        <option value="oz">oz</option>
+                                                        <option value="lb">lb</option>
+                                                        <option value="g">g</option>
+                                                        <option value="ml">ml</option>
+                                                        <option value="piece">piece</option>
+                                                    </select>
+                                                </div>
                                             </div>
                                             <div class="col-12">
                                                 <button type="button" class="btn btn-outline-danger delete-ingredient">
