@@ -79,55 +79,66 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Global function to handle form submission
-async function handleFormSubmit(form) {
-    console.log('handleFormSubmit called');
-    debug('Form submitted');
-    
+async function handleFormSubmit(form, isMore = false) {
     const loadingIndicator = document.getElementById('loadingIndicator');
-    const resultsDiv = document.getElementById('recipeResults');
-    
-    debug('Loading indicator element:', loadingIndicator);
-    debug('Results div element:', resultsDiv);
+    loadingIndicator.classList.remove('d-none');
 
-    const ingredients = [];
-    const ingredientEntries = form.querySelectorAll('.ingredient-entry');
-    debug('Found ingredient entries:', ingredientEntries.length);
+    try {
+        const ingredients = Array.from(document.querySelectorAll('.ingredient-entry')).map(entry => {
+            return {
+                name: entry.querySelector('input').value,
+                quantity: entry.querySelector('.quantity-select').value,
+                unit: entry.querySelector('.unit-select').value
+            };
+        }).filter(ing => ing.name.trim() !== '');
 
-    ingredientEntries.forEach((entry, index) => {
-        const input = entry.querySelector('input');
-        const quantitySelect = entry.querySelector('.quantity-select');
-        const unitSelect = entry.querySelector('.unit-select');
-        
-        if (input && input.value.trim()) {
-            ingredients.push({
-                name: input.value.trim(),
-                quantity: quantitySelect ? quantitySelect.value || null : null,
-                unit: unitSelect ? unitSelect.value || null : null
-            });
+        const data = {
+            fitness_goal: document.getElementById('fitnessGoal').value,
+            meal_type: document.getElementById('mealType').value,
+            ingredients: ingredients,
+            is_more: isMore,
+            max_cooking_time: document.getElementById('cookingTime').value || null
+        };
+
+        const response = await fetch('/get_recipes', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            if (response.status === 429) {
+                // Rate limit exceeded
+                const retryAfter = errorData.retry_after || 60;
+                const minutes = Math.ceil(retryAfter / 60);
+                throw new Error(`Rate limit exceeded. Please try again in ${minutes} minute${minutes > 1 ? 's' : ''}.`);
+            }
+            throw new Error(errorData.error || 'Failed to get recipes');
         }
-    });
 
-    const fitnessGoal = document.getElementById('fitnessGoal').value.trim();
-    const mealType = document.getElementById('mealType').value;
-    const cookingTime = document.getElementById('cookingTime').value.trim();
-
-    debug('Collected form data:', {
-        fitnessGoal,
-        mealType,
-        cookingTime,
-        ingredients
-    });
-
-    const data = {
-        fitness_goal: fitnessGoal,
-        meal_type: mealType,
-        max_cooking_time: cookingTime || null,
-        ingredients: ingredients,
-        is_more: false,
-        allow_extra_ingredients: false
-    };
-
-    await fetchAndDisplayRecipes(data);
+        const result = await response.json();
+        displayRecipes(result.recipes);
+    } catch (error) {
+        // Create or update error message
+        let errorDiv = document.getElementById('errorMessage');
+        if (!errorDiv) {
+            errorDiv = document.createElement('div');
+            errorDiv.id = 'errorMessage';
+            errorDiv.className = 'alert alert-danger mt-3';
+            document.getElementById('recipeResults').prepend(errorDiv);
+        }
+        errorDiv.textContent = error.message;
+        
+        // Scroll to error message on mobile
+        if (window.innerWidth <= 768) {
+            errorDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    } finally {
+        loadingIndicator.classList.add('d-none');
+    }
 }
 
 // Function to fetch and display recipes
@@ -232,122 +243,168 @@ function displayRecipes(recipes, append = false) {
     }
 
     recipes.forEach((recipe, index) => {
-        const card = document.createElement('div');
-        card.className = 'card mb-3 recipe-card';
+        const recipeCard = document.createElement('div');
+        recipeCard.className = 'recipe-card';
         
-        // Check if recipe requires additional ingredients
-        const description = recipe.description;
-        const hasAdditionalIngredients = description.toLowerCase().includes('additional required ingredients');
+        const cardBody = document.createElement('div');
+        cardBody.className = 'card-body';
+
+        // Recipe title
+        const title = document.createElement('h3');
+        title.textContent = recipe.name;
+        cardBody.appendChild(title);
+
+        // Recipe info (cooking time, servings, etc)
+        const recipeInfo = document.createElement('div');
+        recipeInfo.className = 'recipe-info';
         
-        // Create preview card with null checks for nutrition values
-        card.innerHTML = `
-            <div class="card-body">
-                ${hasAdditionalIngredients ? `
-                    <div class="alert alert-info mb-3">
-                        This recipe requires a few additional ingredients
-                    </div>
-                ` : ''}
-                <h5 class="card-title">${recipe.name || 'Untitled Recipe'}</h5>
-                <p class="card-text">${recipe.description || 'No description available'}</p>
-                <div class="recipe-meta mb-2">
-                    <small class="text-muted">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clock me-1" viewBox="0 0 16 16">
-                            <path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/>
-                            <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/>
-                        </svg>
-                        ${(recipe.cooking_time || recipe.prep_time) ? `${recipe.cooking_time || recipe.prep_time} minutes` : 'Time not specified'}
-                    </small>
-                </div>
-                <div class="nutrition-info mb-2">
-                    <small class="text-muted">
-                        Calories: ${recipe.nutrition?.calories || '0'} | 
-                        Protein: ${recipe.nutrition?.protein || '0'}g | 
-                        Carbs: ${recipe.nutrition?.carbs || '0'}g | 
-                        Fats: ${recipe.nutrition?.fats || '0'}g
-                    </small>
-                </div>
-                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#recipeModal${index}">
-                    View Full Recipe
-                </button>
-            </div>
-        `;
+        if (recipe.cooking_time) {
+            const timeSpan = document.createElement('span');
+            timeSpan.innerHTML = `<svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/>
+                <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/>
+            </svg>${recipe.cooking_time} mins`;
+            recipeInfo.appendChild(timeSpan);
+        }
 
-        // Create detailed modal
-        const modal = document.createElement('div');
-        modal.className = 'modal fade';
-        modal.id = `recipeModal${index}`;
-        modal.setAttribute('tabindex', '-1');
-        modal.setAttribute('aria-labelledby', `recipeModalLabel${index}`);
-        modal.setAttribute('aria-hidden', 'true');
+        if (recipe.servings) {
+            const servingsSpan = document.createElement('span');
+            servingsSpan.innerHTML = `<svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v13.5a.5.5 0 0 1-.777.416L8 13.101l-5.223 2.815A.5.5 0 0 1 2 15.5V2zm2-1a1 1 0 0 0-1 1v12.566l4.723-2.482a.5.5 0 0 1 .554 0L13 14.566V2a1 1 0 0 0-1-1H4z"/>
+            </svg>${recipe.servings} servings`;
+            recipeInfo.appendChild(servingsSpan);
+        }
 
-        const ingredientsList = (recipe.ingredients || [])
-            .map(ingredient => `<li>${ingredient || ''}</li>`)
-            .join('');
+        cardBody.appendChild(recipeInfo);
 
-        const instructionsList = (recipe.instructions || [])
-            .map(step => `<li>${step || ''}</li>`)
-            .join('');
+        // Ingredients section
+        const ingredientsTitle = document.createElement('h4');
+        ingredientsTitle.textContent = 'Ingredients';
+        ingredientsTitle.className = 'mt-3 mb-2';
+        cardBody.appendChild(ingredientsTitle);
 
-        modal.innerHTML = `
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="recipeModalLabel${index}">${recipe.name || 'Untitled Recipe'}</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        ${hasAdditionalIngredients ? `
-                            <div class="alert alert-info mb-3">
-                                This recipe requires a few additional ingredients beyond what you have available.
-                                Check the recipe description for details.
-                            </div>
-                        ` : ''}
-                        <div class="recipe-meta mb-3">
-                            <strong>Time Required:</strong>
-                            <div class="d-flex align-items-center mt-1">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clock me-2" viewBox="0 0 16 16">
-                                    <path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/>
-                                    <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/>
-                                </svg>
-                                ${recipe.cooking_time || recipe.prep_time ? `
-                                    Total Time: ${recipe.cooking_time || recipe.prep_time} minutes
-                                    ${recipe.prep_time && recipe.cooking_time ? `<br>(${recipe.prep_time} min prep + ${recipe.cooking_time - recipe.prep_time} min cooking)` : ''}
-                                ` : 'Time not specified'}
-                            </div>
-                        </div>
+        const ingredientsList = document.createElement('ul');
+        ingredientsList.className = 'ingredients-list';
+        recipe.ingredients.forEach(ingredient => {
+            const li = document.createElement('li');
+            li.textContent = ingredient;
+            ingredientsList.appendChild(li);
+        });
+        cardBody.appendChild(ingredientsList);
 
-                        <h6>Description</h6>
-                        <p>${recipe.description || 'No description available'}</p>
-                        
-                        <h6>Nutrition Information</h6>
-                        <p>
-                            Calories: ${recipe.nutrition?.calories || '0'}<br>
-                            Protein: ${recipe.nutrition?.protein || '0'}g<br>
-                            Carbs: ${recipe.nutrition?.carbs || '0'}g<br>
-                            Fats: ${recipe.nutrition?.fats || '0'}g
-                        </p>
+        // Instructions section
+        const instructionsTitle = document.createElement('h4');
+        instructionsTitle.textContent = 'Instructions';
+        instructionsTitle.className = 'mt-3 mb-2';
+        cardBody.appendChild(instructionsTitle);
 
-                        <h6>How This Recipe Supports Your Goal</h6>
-                        <p>${recipe.goal_alignment || 'No goal alignment information available'}</p>
+        const instructionsList = document.createElement('ol');
+        instructionsList.className = 'instructions-list';
+        recipe.instructions.forEach(instruction => {
+            const li = document.createElement('li');
+            li.textContent = instruction;
+            instructionsList.appendChild(li);
+        });
+        cardBody.appendChild(instructionsList);
 
-                        <h6>Ingredients</h6>
-                        <ul class="ingredients-list">
-                            ${ingredientsList}
-                        </ul>
+        // Add the card body to the recipe card
+        recipeCard.appendChild(cardBody);
+        resultsDiv.appendChild(recipeCard);
 
-                        <h6>Instructions</h6>
-                        <ol class="instructions-list">
-                            ${instructionsList}
-                        </ol>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        resultsDiv.appendChild(card);
-        resultsDiv.appendChild(modal);
+        // Add touch-friendly expand/collapse for mobile
+        if (window.innerWidth <= 768) {
+            const preview = document.createElement('div');
+            preview.className = 'recipe-preview d-md-none';
+            preview.style.maxHeight = '150px';
+            preview.style.overflow = 'hidden';
+            preview.style.position = 'relative';
+            
+            const expandBtn = document.createElement('button');
+            expandBtn.className = 'btn btn-link text-decoration-none w-100 text-center py-2 mt-2';
+            expandBtn.innerHTML = 'Show More';
+            
+            let expanded = false;
+            expandBtn.addEventListener('click', () => {
+                if (expanded) {
+                    preview.style.maxHeight = '150px';
+                    expandBtn.innerHTML = 'Show More';
+                } else {
+                    preview.style.maxHeight = 'none';
+                    expandBtn.innerHTML = 'Show Less';
+                }
+                expanded = !expanded;
+            });
+            
+            // Move content to preview
+            while (cardBody.firstChild) {
+                preview.appendChild(cardBody.firstChild);
+            }
+            
+            cardBody.appendChild(preview);
+            cardBody.appendChild(expandBtn);
+        }
     });
-} 
+
+    // Add "Load More" button if there are more recipes
+    if (recipes.length === 5) {
+        const loadMoreBtn = document.createElement('button');
+        loadMoreBtn.className = 'btn btn-outline-primary w-100 mt-3';
+        loadMoreBtn.textContent = 'Load More Recipes';
+        loadMoreBtn.onclick = () => {
+            const currentIngredients = Array.from(document.querySelectorAll('.ingredient-entry')).map(entry => {
+                return {
+                    name: entry.querySelector('input').value,
+                    quantity: entry.querySelector('.quantity-select').value,
+                    unit: entry.querySelector('.unit-select').value
+                };
+            }).filter(ing => ing.name.trim() !== '');
+
+            handleFormSubmit(document.getElementById('ingredientForm'), true);
+        };
+        resultsDiv.appendChild(loadMoreBtn);
+    }
+}
+
+// Add smooth scrolling to recipe results on mobile
+if (window.innerWidth <= 768) {
+    document.getElementById('ingredientForm').addEventListener('submit', function() {
+        setTimeout(() => {
+            const resultsDiv = document.getElementById('recipeResults');
+            if (resultsDiv.children.length > 0) {
+                resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }, 500); // Small delay to ensure results are rendered
+    });
+}
+
+// Prevent double-tap zoom on iOS
+document.addEventListener('touchend', function(event) {
+    if (event.target.tagName === 'BUTTON' || event.target.tagName === 'SELECT') {
+        event.preventDefault();
+    }
+}, false);
+
+// Handle orientation changes
+window.addEventListener('orientationchange', function() {
+    setTimeout(() => {
+        window.scrollTo(0, 0);
+    }, 100);
+});
+
+// Add rate limit check function
+async function checkRateLimit() {
+    try {
+        const response = await fetch('/rate_limit');
+        if (response.ok) {
+            const data = await response.json();
+            // You can use this data to show remaining requests
+            // For now, we'll just log it
+            console.log('Rate limit info:', data);
+        }
+    } catch (error) {
+        console.error('Failed to check rate limit:', error);
+    }
+}
+
+// Check rate limit periodically
+setInterval(checkRateLimit, 60000); // Check every minute 

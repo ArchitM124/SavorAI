@@ -22,8 +22,17 @@ limiter = Limiter(
     app=app,
     key_func=get_remote_address,
     default_limits=["50 per day", "5 per hour"],
-    storage_uri="memory://"
+    storage_uri=os.getenv('REDIS_URL', 'redis://localhost:6379')  # Use Redis for storage
 )
+
+# Error handler for rate limiting
+@app.errorhandler(429)
+def ratelimit_handler(e):
+    return jsonify({
+        "error": "Rate limit exceeded",
+        "message": str(e.description),
+        "retry_after": int(e.retry_after)
+    }), 429
 
 def generate_recipes(data: Dict[str, Any], is_more: bool = False, allow_extra_ingredients: bool = False) -> Union[Dict[str, Any], Tuple[Dict[str, str], int]]:
     try:
@@ -148,6 +157,20 @@ def get_recipes():
 
     except Exception as e:
         print(f"Error: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+# Add a route to check remaining rate limit
+@app.route('/rate_limit', methods=['GET'])
+@limiter.exempt
+def get_rate_limit():
+    try:
+        # Get the current limits for the user
+        limits = limiter.get_limits_for_context(get_remote_address())
+        return jsonify({
+            "limits": str(limits),
+            "remaining": str(limiter.get_window_stats(get_remote_address()))
+        })
+    except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
