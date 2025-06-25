@@ -388,14 +388,125 @@ body {
     border-right: 6px solid transparent;
     border-top: 6px solid #6c757d;
     pointer-events: none;
+    z-index: 1;
 }
 
 .form-select {
     width: 100%;
-    appearance: none;
-    -webkit-appearance: none;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
+    background-image: none !important;
     cursor: pointer;
-    padding-right: 30px !important;
+    padding: 10px 35px 10px 12px !important;
+}
+
+/* Remove default arrow in IE */
+.form-select::-ms-expand {
+    display: none;
+}
+
+/* Mobile specific styles */
+@media (max-width: 768px) {
+    .form-control, .form-select, .btn {
+        font-size: 16px;
+        min-height: 48px;
+    }
+    
+    .select-wrapper {
+        display: block;
+        width: 100%;
+    }
+    
+    .select-wrapper select {
+        width: 100%;
+        min-height: 48px;
+    }
+    
+    /* Make the entire select wrapper clickable */
+    .select-wrapper::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 2;
+    }
+    
+    .form-select {
+        padding: 12px 35px 12px 12px !important;
+    }
+    
+    /* Increase touch target size for dropdowns */
+    .form-select option {
+        padding: 12px;
+        min-height: 48px;
+    }
+    
+    .ingredient-entry {
+        padding: 15px;
+        margin-bottom: 15px;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        background: #ffffff;
+    }
+    
+    .ingredient-entry .row {
+        margin-bottom: 0.5rem;
+    }
+    
+    .delete-ingredient {
+        width: 100%;
+        margin-top: 0.5rem;
+        min-height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 12px 20px;
+    }
+    
+    #addIngredient {
+        min-height: 48px;
+        margin-bottom: 1rem;
+        padding: 12px 20px;
+    }
+}
+
+/* Sticky form on desktop */
+@media (min-width: 992px) {
+    .card.sticky-top {
+        top: 1rem;
+    }
+    
+    .ingredient-entry {
+        padding: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+}
+
+/* Remove dark mode styles */
+@media (prefers-color-scheme: dark) {
+    /* Override dark mode with light theme */
+    body {
+        background-color: #ffffff;
+        color: #333;
+    }
+    
+    .card, .recipe-card, .ingredient-entry {
+        background-color: #ffffff;
+        border-color: #e9ecef;
+    }
+    
+    .form-control, .form-select {
+        background-color: #ffffff;
+        color: #333;
+        border-color: #ced4da;
+    }
+    
+    .text-muted {
+        color: #6c757d !important;
+    }
 }
 
 #ingredientsList {
