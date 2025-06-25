@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recipe Finder</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="#">Recipe Finder</a>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <div class="col-md-6 col-lg-5 offset-lg-1">
+                <div class="card sticky-top" style="top: 1rem;">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Your Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="ingredientForm" onsubmit="console.log('Form submit triggered'); event.preventDefault(); handleFormSubmit(this); return false;">
+                            <div class="mb-3">
+                                <label for="fitnessGoal" class="form-label">What's your fitness goal?</label>
+                                <input type="text" class="form-control" id="fitnessGoal" 
+                                    placeholder="e.g., losing 10% body fat, gaining lean muscle, training for marathon" required>
+                                <small class="text-muted">Be as specific as you'd like about what you're trying to achieve</small>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="mealType" class="form-label">Meal Type</label>
+                                <select class="form-select" id="mealType" required>
+                                    <option value="">Select meal type</option>
+                                    <option value="breakfast">Breakfast</option>
+                                    <option value="lunch">Lunch</option>
+                                    <option value="dinner">Dinner</option>
+                                    <option value="snack">Snack</option>
+                                    <option value="dessert">Dessert</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="cookingTime" class="form-label">Maximum Cooking Time (Optional)</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="cookingTime" min="5" max="240" placeholder="e.g., 30">
+                                    <span class="input-group-text">minutes</span>
+                                </div>
+                                <small class="text-muted">Leave empty if time is not a constraint</small>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Your Ingredients</label>
+                                <small class="text-muted d-block mb-2">Basic ingredients like salt, pepper, oil, etc. are assumed available</small>
+                                <div id="ingredientsList">
+                                    <div class="row mb-2">
+                                        <div class="col">
+                                            <small class="text-muted">Ingredient name</small>
+                                        </div>
+                                        <div class="col-auto" style="width: 100px;">
+                                            <small class="text-muted">(optional)</small>
+                                        </div>
+                                        <div class="col-auto" style="width: 120px;">
+                                            <small class="text-muted">(optional)</small>
+                                        </div>
+                                        <div class="col-auto" style="width: 42px;">
+                                        </div>
+                                    </div>
+                                    <div class="ingredient-entry row mb-2">
+                                        <div class="col">
+                                            <input type="text" class="form-control" placeholder="Enter ingredient">
+                                        </div>
+                                        <div class="col-auto" style="width: 100px;">
+                                            <select class="form-select quantity-select">
+                                                <option value="">Quantity</option>
+                                                <option value="0.25">1/4</option>
+                                                <option value="0.5">1/2</option>
+                                                <option value="0.75">3/4</option>
+                                                <option value="1">1</option>
+                                                <option value="2">2</option>
+                                                <option value="3">3</option>
+                                                <option value="4">4</option>
+                                                <option value="5">5</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-auto" style="width: 120px;">
+                                            <select class="form-select unit-select">
+                                                <option value="">Unit</option>
+                                                <option value="cup">cup</option>
+                                                <option value="tbsp">tbsp</option>
+                                                <option value="tsp">tsp</option>
+                                                <option value="oz">oz</option>
+                                                <option value="lb">lb</option>
+                                                <option value="g">g</option>
+                                                <option value="ml">ml</option>
+                                                <option value="piece">piece</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-auto" style="width: 42px;">
+                                            <button type="button" class="btn btn-outline-danger delete-ingredient" onclick="if(document.querySelectorAll('.ingredient-entry').length > 1) this.closest('.ingredient-entry').remove();" style="padding: 0.25rem 0.5rem; border: none;">×</button>
+                                        </div>
+                                    </div>
+                                    <div class="ingredient-entry row mb-2">
+                                        <div class="col">
+                                            <input type="text" class="form-control" placeholder="Enter ingredient">
+                                        </div>
+                                        <div class="col-auto" style="width: 100px;">
+                                            <select class="form-select quantity-select">
+                                                <option value="">Quantity</option>
+                                                <option value="0.25">1/4</option>
+                                                <option value="0.5">1/2</option>
+                                                <option value="0.75">3/4</option>
+                                                <option value="1">1</option>
+                                                <option value="2">2</option>
+                                                <option value="3">3</option>
+                                                <option value="4">4</option>
+                                                <option value="5">5</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-auto" style="width: 120px;">
+                                            <select class="form-select unit-select">
+                                                <option value="">Unit</option>
+                                                <option value="cup">cup</option>
+                                                <option value="tbsp">tbsp</option>
+                                                <option value="tsp">tsp</option>
+                                                <option value="oz">oz</option>
+                                                <option value="lb">lb</option>
+                                                <option value="g">g</option>
+                                                <option value="ml">ml</option>
+                                                <option value="piece">piece</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-auto" style="width: 42px;">
+                                            <button type="button" class="btn btn-outline-danger delete-ingredient" onclick="if(document.querySelectorAll('.ingredient-entry').length > 1) this.closest('.ingredient-entry').remove();" style="padding: 0.25rem 0.5rem; border: none;">×</button>
+                                        </div>
+                                    </div>
+                                    <div class="ingredient-entry row mb-2">
+                                        <div class="col">
+                                            <input type="text" class="form-control" placeholder="Enter ingredient">
+                                        </div>
+                                        <div class="col-auto" style="width: 100px;">
+                                            <select class="form-select quantity-select">
+                                                <option value="">Quantity</option>
+                                                <option value="0.25">1/4</option>
+                                                <option value="0.5">1/2</option>
+                                                <option value="0.75">3/4</option>
+                                                <option value="1">1</option>
+                                                <option value="2">2</option>
+                                                <option value="3">3</option>
+                                                <option value="4">4</option>
+                                                <option value="5">5</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-auto" style="width: 120px;">
+                                            <select class="form-select unit-select">
+                                                <option value="">Unit</option>
+                                                <option value="cup">cup</option>
+                                                <option value="tbsp">tbsp</option>
+                                                <option value="tsp">tsp</option>
+                                                <option value="oz">oz</option>
+                                                <option value="lb">lb</option>
+                                                <option value="g">g</option>
+                                                <option value="ml">ml</option>
+                                                <option value="piece">piece</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-auto" style="width: 42px;">
+                                            <button type="button" class="btn btn-outline-danger delete-ingredient" onclick="if(document.querySelectorAll('.ingredient-entry').length > 1) this.closest('.ingredient-entry').remove();" style="padding: 0.25rem 0.5rem; border: none;">×</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-outline-primary" id="addIngredient" onclick="var t=document.querySelector('.ingredient-entry').cloneNode(true);t.querySelectorAll('input,select').forEach(i=>i.value='');document.getElementById('ingredientsList').appendChild(t);" style="margin-top: 0.5rem;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-circle me-1" viewBox="0 0 16 16">
+                                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                                        <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+                                    </svg>
+                                    Add another ingredient
+                                </button>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary">Find Recipes</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-5">
+                <div id="recipeResults"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="loadingIndicator" class="d-none">
+        <div class="text-center">
+            <div class="spinner-border text-primary mb-3" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <div>Generating your personalized recipes...</div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html> 
