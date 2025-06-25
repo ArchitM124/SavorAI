@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Recipe Finder</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark">
@@ -14,132 +15,59 @@
         </div>
     </nav>
 
-    <div class="container-fluid mt-4">
-        <div class="row g-4">
-            <div class="col-12 col-lg-5 offset-lg-1">
-                <div class="card shadow-sm">
-                    <div class="card-header bg-white">
-                        <h5 class="card-title mb-0">Your Information</h5>
+    <div class="container mt-4">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Find Recipes</h5>
                     </div>
                     <div class="card-body">
-                        <form id="ingredientForm" onsubmit="event.preventDefault(); handleFormSubmit(this);">
-                            <div class="mb-4">
-                                <label for="fitnessGoal" class="form-label">What's your fitness goal?</label>
-                                <input type="text" class="form-control form-control-lg" id="fitnessGoal" 
-                                    placeholder="e.g., losing 10% body fat, gaining lean muscle" required>
-                                <small class="text-muted">Be as specific as you'd like about what you're trying to achieve</small>
-                            </div>
-
-                            <div class="mb-4">
+                        <form id="ingredientForm">
+                            <div class="mb-3">
                                 <label for="mealType" class="form-label">Meal Type</label>
-                                <select class="form-select form-select-lg" id="mealType" required>
+                                <select class="form-select" id="mealType" required>
                                     <option value="">Select meal type</option>
                                     <option value="breakfast">Breakfast</option>
                                     <option value="lunch">Lunch</option>
                                     <option value="dinner">Dinner</option>
                                     <option value="snack">Snack</option>
-                                    <option value="dessert">Dessert</option>
                                 </select>
                             </div>
 
-                            <div class="mb-4">
-                                <label for="cookingTime" class="form-label">Maximum Cooking Time (Optional)</label>
-                                <div class="input-group">
-                                    <input type="number" class="form-control" id="cookingTime" min="5" max="240" placeholder="e.g., 30" style="max-width: 120px;">
-                                    <span class="input-group-text">minutes</span>
-                                </div>
-                                <small class="text-muted">Leave empty if time is not a constraint</small>
+                            <div class="mb-3">
+                                <label for="cookingTime" class="form-label">Maximum Cooking Time (minutes)</label>
+                                <input type="number" class="form-control" id="cookingTime" min="1" required>
                             </div>
-                            
-                            <div class="mb-4">
-                                <label class="form-label">Your Ingredients</label>
-                                <small class="text-muted d-block mb-3">Basic ingredients like salt, pepper, oil, etc. are assumed available</small>
-                                <div id="ingredientsList">
-                                    <div class="ingredient-entry">
-                                        <div class="row g-2">
-                                            <div class="col-12">
-                                                <input type="text" class="form-control form-control-lg ingredient-name" placeholder="Enter ingredient name" required>
-                                            </div>
-                                            <div class="col-6">
-                                                <div class="select-wrapper">
-                                                    <select class="form-select form-select-lg quantity-select">
-                                                        <option value="">Quantity</option>
-                                                        <option value="0.25">1/4</option>
-                                                        <option value="0.5">1/2</option>
-                                                        <option value="0.75">3/4</option>
-                                                        <option value="1">1</option>
-                                                        <option value="2">2</option>
-                                                        <option value="3">3</option>
-                                                        <option value="4">4</option>
-                                                        <option value="5">5</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                            <div class="col-6">
-                                                <div class="select-wrapper">
-                                                    <select class="form-select form-select-lg unit-select">
-                                                        <option value="">Unit</option>
-                                                        <option value="cup">cup</option>
-                                                        <option value="tbsp">tbsp</option>
-                                                        <option value="tsp">tsp</option>
-                                                        <option value="oz">oz</option>
-                                                        <option value="lb">lb</option>
-                                                        <option value="g">g</option>
-                                                        <option value="ml">ml</option>
-                                                        <option value="piece">piece</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                            <div class="col-12">
-                                                <button type="button" class="btn btn-outline-danger delete-ingredient w-100">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
-                                                        <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
-                                                        <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
-                                                    </svg>
-                                                    <span class="ms-2">Remove</span>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <button type="button" class="btn btn-outline-primary btn-lg w-100" id="addIngredient">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-circle me-2" viewBox="0 0 16 16">
-                                        <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
-                                        <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
-                                    </svg>
-                                    Add another ingredient
+
+                            <div class="mb-3">
+                                <label class="form-label">Ingredients</label>
+                                <div id="ingredientsList"></div>
+                                <button type="button" class="btn btn-outline-primary" id="addIngredient">
+                                    <i class="bi bi-plus-lg"></i> Add Ingredient
                                 </button>
                             </div>
 
-                            <button type="submit" class="btn btn-primary btn-lg w-100">Find Recipes</button>
+                            <button type="submit" class="btn btn-primary" id="findRecipes">Find Recipes</button>
                         </form>
                     </div>
                 </div>
             </div>
-            <div class="col-12 col-lg-5">
-                <div id="recipeResults"></div>
-            </div>
         </div>
     </div>
 
-    <div id="loadingIndicator" class="d-none">
-        <div class="loading-content">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
-            </div>
-            <div>Generating your personalized recipes...</div>
+    <div id="loadingIndicator" style="display: none;">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
         </div>
+        <p class="mt-3">Finding recipes...</p>
     </div>
 
-    <div class="recipes-overlay" id="recipesOverlay">
-        <button type="button" class="close-recipes" id="closeRecipes" aria-label="Close recipes">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
-            </svg>
+    <div class="recipes-overlay">
+        <button class="close-recipes">
+            <i class="bi bi-x-lg"></i>
         </button>
-        <div class="recipes-container">
-            <div id="overlayRecipeResults"></div>
-        </div>
+        <div class="recipes-container"></div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

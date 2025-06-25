@@ -18,210 +18,176 @@ console.log('Script loaded and running');
 document.addEventListener('DOMContentLoaded', function() {
     debug('Script loaded');
 
-    // Get elements
-    const form = document.getElementById('ingredientForm');
-    const ingredientsList = document.getElementById('ingredientsList');
     const addIngredientBtn = document.getElementById('addIngredient');
+    const ingredientsList = document.getElementById('ingredientsList');
+    const findRecipesBtn = document.getElementById('findRecipes');
     const loadingIndicator = document.getElementById('loadingIndicator');
-    const mealTypeSelect = document.getElementById('mealType');
-    const recipesOverlay = document.getElementById('recipesOverlay');
-    const closeRecipesBtn = document.getElementById('closeRecipes');
-    const overlayRecipeResults = document.getElementById('overlayRecipeResults');
+    const recipesOverlay = document.querySelector('.recipes-overlay');
+    const closeRecipesBtn = document.querySelector('.close-recipes');
+    const recipesContainer = document.querySelector('.recipes-container');
+    let ingredientCounter = 0;
 
-    debug('Elements initialized');
+    function createIngredientEntry() {
+        const entry = document.createElement('div');
+        entry.className = 'ingredient-entry';
+        entry.innerHTML = `
+            <div class="row">
+                <div class="col-md-5 mb-2">
+                    <input type="text" class="form-control ingredient-name" placeholder="Ingredient name" required>
+                </div>
+                <div class="col-md-4 mb-2">
+                    <input type="number" class="form-control ingredient-amount" placeholder="Amount" required>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <select class="form-select ingredient-unit" required>
+                        <option value="">Unit</option>
+                        <option value="grams">grams</option>
+                        <option value="ml">ml</option>
+                        <option value="pieces">pieces</option>
+                        <option value="cups">cups</option>
+                        <option value="tbsp">tbsp</option>
+                        <option value="tsp">tsp</option>
+                    </select>
+                </div>
+            </div>
+            <button type="button" class="btn btn-outline-danger delete-ingredient">Remove Ingredient</button>
+        `;
 
-    // Close recipes overlay
-    if (closeRecipesBtn) {
-        closeRecipesBtn.addEventListener('click', function() {
-            recipesOverlay.classList.remove('active');
-            document.body.style.overflow = '';
+        entry.querySelector('.delete-ingredient').addEventListener('click', function() {
+            entry.remove();
         });
+
+        return entry;
     }
 
-    // Add ingredient entry
-    if (addIngredientBtn) {
-        addIngredientBtn.addEventListener('click', function() {
-            debug('Add ingredient button clicked');
-            
-            // Get the template
-            const template = document.querySelector('.ingredient-entry');
-            if (!template) {
-                debug('No template found');
+    addIngredientBtn.addEventListener('click', function() {
+        const newEntry = createIngredientEntry();
+        ingredientsList.appendChild(newEntry);
+        ingredientCounter++;
+    });
+
+    // Add initial ingredient entry
+    if (ingredientCounter === 0) {
+        const initialEntry = createIngredientEntry();
+        ingredientsList.appendChild(initialEntry);
+        ingredientCounter++;
+    }
+
+    findRecipesBtn.addEventListener('click', async function(e) {
+        e.preventDefault();
+
+        const ingredients = [];
+        const entries = document.querySelectorAll('.ingredient-entry');
+        let isValid = true;
+
+        entries.forEach(entry => {
+            const name = entry.querySelector('.ingredient-name').value.trim();
+            const amount = entry.querySelector('.ingredient-amount').value.trim();
+            const unit = entry.querySelector('.ingredient-unit').value;
+
+            if (!name || !amount || !unit) {
+                isValid = false;
                 return;
             }
 
-            // Create new entry
-            const newEntry = template.cloneNode(true);
-            
-            // Clear all inputs in the new entry
-            newEntry.querySelectorAll('input, select').forEach(input => {
-                input.value = '';
+            ingredients.push({
+                name: name,
+                amount: parseFloat(amount),
+                unit: unit
             });
-            
-            // Add the new entry at the beginning of the list
-            if (ingredientsList.firstChild) {
-                ingredientsList.insertBefore(newEntry, ingredientsList.firstChild);
-            } else {
-                ingredientsList.appendChild(newEntry);
-            }
-            
-            // Focus the new ingredient input
-            const newInput = newEntry.querySelector('.ingredient-name');
-            if (newInput) {
-                setTimeout(() => {
-                    newInput.focus();
-                }, 0);
-            }
         });
-    }
 
-    // Handle ingredient removal
-    if (ingredientsList) {
-        ingredientsList.addEventListener('click', function(e) {
-            const deleteBtn = e.target.closest('.delete-ingredient');
-            if (!deleteBtn) return;
-            
-            debug('Delete button clicked');
-            const entries = document.querySelectorAll('.ingredient-entry');
-            if (entries.length <= 1) return; // Keep at least one entry
-            
-            const entry = deleteBtn.closest('.ingredient-entry');
-            if (entry) {
-                entry.remove();
-            }
-        });
-    }
+        if (!isValid || ingredients.length === 0) {
+            alert('Please fill in all ingredient fields correctly.');
+            return;
+        }
 
-    // Handle form submission
-    if (form) {
-        form.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            debug('Form submitted');
+        const cookingTime = document.getElementById('cookingTime').value;
+        const mealType = document.getElementById('mealType').value;
 
-            // Show loading indicator and prevent interaction
-            if (loadingIndicator) {
-                loadingIndicator.classList.remove('d-none');
-            }
-            document.body.style.overflow = 'hidden';
+        if (!cookingTime) {
+            alert('Please specify the maximum cooking time.');
+            return;
+        }
 
-            try {
-                const ingredients = Array.from(document.querySelectorAll('.ingredient-entry')).map(entry => {
-                    const nameInput = entry.querySelector('.ingredient-name');
-                    const quantitySelect = entry.querySelector('.quantity-select');
-                    const unitSelect = entry.querySelector('.unit-select');
-                    
-                    return {
-                        name: nameInput ? nameInput.value.trim() : '',
-                        quantity: quantitySelect ? quantitySelect.value : '',
-                        unit: unitSelect ? unitSelect.value : ''
-                    };
-                }).filter(ing => ing.name !== '');
+        loadingIndicator.style.display = 'block';
 
-                if (ingredients.length === 0) {
-                    throw new Error('Please add at least one ingredient.');
-                }
-
-                const data = {
-                    fitness_goal: document.getElementById('fitnessGoal').value.trim(),
-                    meal_type: mealTypeSelect ? mealTypeSelect.value : '',
+        try {
+            const response = await fetch('/get_recipes', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
                     ingredients: ingredients,
-                    max_cooking_time: document.getElementById('cookingTime').value || null
-                };
+                    max_cooking_time: parseInt(cookingTime),
+                    meal_type: mealType
+                })
+            });
 
-                if (!data.fitness_goal) {
-                    throw new Error('Please enter your fitness goal.');
-                }
-
-                if (!data.meal_type) {
-                    throw new Error('Please select a meal type.');
-                }
-
-                debug('Submitting data:', data);
-
-                const response = await fetch('/get_recipes', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(data)
-                });
-
-                let errorData;
-                const contentType = response.headers.get('content-type');
-                if (contentType && contentType.includes('application/json')) {
-                    errorData = await response.json();
-                } else {
-                    errorData = { error: await response.text() };
-                }
-
-                if (!response.ok) {
-                    if (response.status === 429) {
-                        throw new Error(`Rate limit exceeded. Please try again in a few minutes.`);
-                    }
-                    throw new Error(errorData.error || 'Failed to get recipes. Please try again.');
-                }
-
-                // Clear any existing error messages
-                const errorDiv = document.getElementById('errorMessage');
-                if (errorDiv) {
-                    errorDiv.remove();
-                }
-
-                // Display recipes in the overlay
-                displayRecipes(errorData.recipes || [], true);
-                
-                // Show the recipes overlay
-                if (recipesOverlay) {
-                    recipesOverlay.classList.add('active');
-                }
-            } catch (error) {
-                debug('Error:', error);
-                let errorDiv = document.getElementById('errorMessage');
-                if (!errorDiv) {
-                    errorDiv = document.createElement('div');
-                    errorDiv.id = 'errorMessage';
-                    errorDiv.className = 'alert alert-danger mt-3';
-                }
-
-                // Format the error message to be more user-friendly
-                let errorMessage = error.message;
-                if (errorMessage.includes('did not match the expected pattern')) {
-                    errorMessage = 'Please check your input and try again. Make sure all required fields are filled correctly.';
-                }
-
-                errorDiv.textContent = errorMessage;
-                
-                // Add error message to the form
-                const formCard = document.querySelector('.card-body');
-                if (formCard) {
-                    formCard.insertBefore(errorDiv, formCard.firstChild);
-                    
-                    // Scroll to error message
-                    errorDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-
-                // Hide the loading indicator and overlay
-                if (loadingIndicator) {
-                    loadingIndicator.classList.add('d-none');
-                }
-                if (recipesOverlay) {
-                    recipesOverlay.classList.remove('active');
-                }
-                document.body.style.overflow = '';
-            } finally {
-                if (loadingIndicator) {
-                    loadingIndicator.classList.add('d-none');
-                }
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
             }
-        });
+
+            const data = await response.json();
+            displayRecipes(data.recipes);
+        } catch (error) {
+            console.error('Error:', error);
+            alert('An error occurred while fetching recipes. Please try again.');
+        } finally {
+            loadingIndicator.style.display = 'none';
+        }
+    });
+
+    function displayRecipes(recipes) {
+        recipesContainer.innerHTML = '';
+        
+        if (recipes.length === 0) {
+            recipesContainer.innerHTML = '<div class="alert alert-info">No recipes found with the given ingredients and criteria.</div>';
+        } else {
+            recipes.forEach(recipe => {
+                const recipeCard = document.createElement('div');
+                recipeCard.className = 'recipe-card card mb-4';
+                
+                const ingredients = recipe.ingredients.map(ing => 
+                    `<li>${ing.amount} ${ing.unit} ${ing.name}</li>`
+                ).join('');
+
+                const steps = recipe.cooking_steps.map((step, index) => 
+                    `<li>${step}</li>`
+                ).join('');
+
+                recipeCard.innerHTML = `
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">${recipe.name}</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="recipe-info">
+                            <i class="bi bi-clock"></i> ${recipe.cooking_time} minutes
+                            <span class="mx-2">|</span>
+                            <i class="bi bi-tag"></i> ${recipe.meal_type}
+                        </p>
+                        <h6>Ingredients:</h6>
+                        <ul class="ingredients-list">
+                            ${ingredients}
+                        </ul>
+                        <h6>Cooking Steps:</h6>
+                        <ol class="cooking-steps">
+                            ${steps}
+                        </ol>
+                    </div>
+                `;
+                
+                recipesContainer.appendChild(recipeCard);
+            });
+        }
+        
+        recipesOverlay.classList.add('active');
     }
 
-    // Ensure meal type dropdown works
-    if (mealTypeSelect) {
-        mealTypeSelect.addEventListener('change', function() {
-            debug('Meal type changed:', this.value);
-        });
-    }
+    closeRecipesBtn.addEventListener('click', function() {
+        recipesOverlay.classList.remove('active');
+    });
 
     debug('Script initialization complete');
 });
