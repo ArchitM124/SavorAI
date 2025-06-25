@@ -3,24 +3,35 @@ import openai
 from dotenv import load_dotenv
 import os
 import json
-from typing import Dict, Any, Union, List, Tuple, Callable, Optional
+from typing import Dict, Any, Union, List, Tuple, Callable
+from datetime import datetime, timedelta
 
-# Import Flask-Limiter with proper type handling
-try:
-    from flask_limiter import Limiter
-    from flask_limiter.util import get_remote_address
-except ImportError:
-    print("Warning: Flask-Limiter not installed. Rate limiting will not work.")
-    # Define base class for type compatibility
-    class LimiterBase:
-        def __init__(self, **kwargs): pass
-        def limit(self, *args, **kwargs) -> Callable: return lambda x: x
-        def exempt(self, *args, **kwargs) -> Callable: return lambda x: x
-        def get_limits_for_context(self, *args) -> Optional[List[str]]: return None
-        def get_window_stats(self, *args) -> Optional[Dict[str, Any]]: return None
+# Global rate limit tracking
+rate_limits: Dict[str, Dict[str, Any]] = {}
+
+def check_rate_limit(ip: str) -> bool:
+    now = datetime.now()
+    if ip not in rate_limits:
+        rate_limits[ip] = {
+            'daily': {'count': 0, 'reset': now + timedelta(days=1)},
+            'hourly': {'count': 0, 'reset': now + timedelta(hours=1)}
+        }
     
-    Limiter = LimiterBase  # type: ignore
-    def get_remote_address() -> str: return "127.0.0.1"
+    # Reset counters if time expired
+    if now >= rate_limits[ip]['daily']['reset']:
+        rate_limits[ip]['daily'] = {'count': 0, 'reset': now + timedelta(days=1)}
+    if now >= rate_limits[ip]['hourly']['reset']:
+        rate_limits[ip]['hourly'] = {'count': 0, 'reset': now + timedelta(hours=1)}
+    
+    # Check limits
+    if (rate_limits[ip]['daily']['count'] >= 50 or 
+        rate_limits[ip]['hourly']['count'] >= 5):
+        return False
+    
+    # Increment counters
+    rate_limits[ip]['daily']['count'] += 1
+    rate_limits[ip]['hourly']['count'] += 1
+    return True
 
 # Load environment variables
 load_dotenv()
@@ -31,23 +42,6 @@ if not os.getenv('OPENAI_API_KEY'):
 
 app = Flask(__name__)
 openai.api_key = os.getenv('OPENAI_API_KEY')
-
-# Setup rate limiting
-limiter = Limiter(
-    app=app,
-    key_func=get_remote_address,
-    default_limits=["50 per day", "5 per hour"],
-    storage_uri="memory://"  # Use simple memory storage
-)
-
-# Error handler for rate limiting
-@app.errorhandler(429)
-def ratelimit_handler(e):
-    return jsonify({
-        "error": "Rate limit exceeded",
-        "message": str(e.description),
-        "retry_after": int(e.retry_after)
-    }), 429
 
 def generate_recipes(data: Dict[str, Any], is_more: bool = False, allow_extra_ingredients: bool = False) -> Union[Dict[str, Any], Tuple[Dict[str, str], int]]:
     try:
@@ -144,14 +138,22 @@ Ensure the response is a valid JSON array of exactly 3 recipes with the structur
         return {"error": str(e)}, 500
 
 @app.route('/')
-@limiter.exempt
 def index():
     return render_template('index.html')
 
 @app.route('/get_recipes', methods=['POST'])
-@limiter.limit("5 per minute")
 def get_recipes():
     try:
+        # Check rate limit
+        client_ip = request.remote_addr or 'unknown'
+        if not check_rate_limit(client_ip):
+            retry_after = int((rate_limits[client_ip]['hourly']['reset'] - datetime.now()).total_seconds())
+            return jsonify({
+                "error": "Rate limit exceeded",
+                "message": "Too many requests",
+                "retry_after": retry_after
+            }), 429
+
         data = request.get_json()
         is_more = data.pop('is_more', False)
         allow_extra_ingredients = data.pop('allow_extra_ingredients', False)
@@ -174,18 +176,29 @@ def get_recipes():
         print(f"Error: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
-# Add a route to check remaining rate limit
 @app.route('/rate_limit', methods=['GET'])
-@limiter.exempt
 def get_rate_limit():
     try:
-        # Basic rate limit info
-        limits = getattr(limiter, 'get_limits_for_context', lambda x: ["Unknown"])(get_remote_address())
-        stats = getattr(limiter, 'get_window_stats', lambda x: {"remaining": "Unknown"})(get_remote_address())
+        client_ip = request.remote_addr or 'unknown'
+        if client_ip not in rate_limits:
+            return jsonify({
+                "daily": {"remaining": 50, "reset_in": 86400},
+                "hourly": {"remaining": 5, "reset_in": 3600}
+            })
+        
+        now = datetime.now()
+        daily = rate_limits[client_ip]['daily']
+        hourly = rate_limits[client_ip]['hourly']
         
         return jsonify({
-            "limits": str(limits),
-            "remaining": str(stats)
+            "daily": {
+                "remaining": max(0, 50 - daily['count']),
+                "reset_in": int((daily['reset'] - now).total_seconds())
+            },
+            "hourly": {
+                "remaining": max(0, 5 - hourly['count']),
+                "reset_in": int((hourly['reset'] - now).total_seconds())
+            }
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
