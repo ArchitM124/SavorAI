@@ -117,12 +117,24 @@ document.addEventListener('DOMContentLoaded', function() {
                     };
                 }).filter(ing => ing.name !== '');
 
+                if (ingredients.length === 0) {
+                    throw new Error('Please add at least one ingredient.');
+                }
+
                 const data = {
                     fitness_goal: document.getElementById('fitnessGoal').value.trim(),
                     meal_type: mealTypeSelect ? mealTypeSelect.value : '',
                     ingredients: ingredients,
                     max_cooking_time: document.getElementById('cookingTime').value || null
                 };
+
+                if (!data.fitness_goal) {
+                    throw new Error('Please enter your fitness goal.');
+                }
+
+                if (!data.meal_type) {
+                    throw new Error('Please select a meal type.');
+                }
 
                 debug('Submitting data:', data);
 
@@ -134,16 +146,21 @@ document.addEventListener('DOMContentLoaded', function() {
                     body: JSON.stringify(data)
                 });
 
+                let errorData;
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    errorData = await response.json();
+                } else {
+                    errorData = { error: await response.text() };
+                }
+
                 if (!response.ok) {
-                    const errorData = await response.json();
                     if (response.status === 429) {
                         throw new Error(`Rate limit exceeded. Please try again in a few minutes.`);
                     }
-                    throw new Error(errorData.error || 'Failed to get recipes');
+                    throw new Error(errorData.error || 'Failed to get recipes. Please try again.');
                 }
 
-                const result = await response.json();
-                
                 // Clear any existing error messages
                 const errorDiv = document.getElementById('errorMessage');
                 if (errorDiv) {
@@ -151,7 +168,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
 
                 // Display recipes in the overlay
-                displayRecipes(result.recipes || [], true);
+                displayRecipes(errorData.recipes || [], true);
                 
                 // Show the recipes overlay
                 if (recipesOverlay) {
@@ -164,21 +181,37 @@ document.addEventListener('DOMContentLoaded', function() {
                     errorDiv = document.createElement('div');
                     errorDiv.id = 'errorMessage';
                     errorDiv.className = 'alert alert-danger mt-3';
-                    if (overlayRecipeResults) {
-                        overlayRecipeResults.prepend(errorDiv);
-                    }
                 }
-                errorDiv.textContent = error.message;
+
+                // Format the error message to be more user-friendly
+                let errorMessage = error.message;
+                if (errorMessage.includes('did not match the expected pattern')) {
+                    errorMessage = 'Please check your input and try again. Make sure all required fields are filled correctly.';
+                }
+
+                errorDiv.textContent = errorMessage;
                 
-                // Show error in overlay
-                if (recipesOverlay) {
-                    recipesOverlay.classList.add('active');
+                // Add error message to the form
+                const formCard = document.querySelector('.card-body');
+                if (formCard) {
+                    formCard.insertBefore(errorDiv, formCard.firstChild);
+                    
+                    // Scroll to error message
+                    errorDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
+
+                // Hide the loading indicator and overlay
+                if (loadingIndicator) {
+                    loadingIndicator.classList.add('d-none');
+                }
+                if (recipesOverlay) {
+                    recipesOverlay.classList.remove('active');
+                }
+                document.body.style.overflow = '';
             } finally {
                 if (loadingIndicator) {
                     loadingIndicator.classList.add('d-none');
                 }
-                document.body.style.overflow = 'hidden'; // Keep scroll locked if showing recipes
             }
         });
     }
