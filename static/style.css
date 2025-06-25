@@ -206,6 +206,15 @@ body {
     .ingredient-entry input,
     .ingredient-entry select {
         height: 48px; /* Larger touch targets */
+        font-size: 16px;
+    }
+
+    /* Make ingredient name input more prominent */
+    .ingredient-entry input[type="text"] {
+        height: 56px;
+        font-size: 18px;
+        padding: 0.75rem 1rem;
+        margin-bottom: 0.5rem;
     }
     
     .delete-ingredient {
@@ -214,6 +223,7 @@ body {
         background-color: #fff1f0;
         border-color: #ffcdd2;
         color: #dc3545;
+        height: 48px;
     }
     
     .delete-ingredient:hover {
