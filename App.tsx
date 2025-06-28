@@ -1,20 +1,19 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-
-import HomeScreen from './src/screens/HomeScreen';
-import ResultsScreen from './src/screens/ResultsScreen';
+import IngredientsScreen from './src/screens/IngredientsScreen';
+import RecipesScreen from './src/screens/RecipesScreen';
 
 const Stack = createNativeStackNavigator();
 
-const App = () => {
+export default function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator
-        initialRouteName="Home"
+        initialRouteName="Ingredients"
         screenOptions={{
           headerStyle: {
-            backgroundColor: '#3498db',
+            backgroundColor: '#f4511e',
           },
           headerTintColor: '#fff',
           headerTitleStyle: {
@@ -23,18 +22,16 @@ const App = () => {
         }}
       >
         <Stack.Screen
-          name="Home"
-          component={HomeScreen}
-          options={{ title: 'Recipe Finder' }}
+          name="Ingredients"
+          component={IngredientsScreen}
+          options={{ title: 'Recipe AI' }}
         />
         <Stack.Screen
-          name="Results"
-          component={ResultsScreen}
-          options={{ title: 'Recipe Results' }}
+          name="Recipes"
+          component={RecipesScreen}
+          options={{ title: 'Your Recipes' }}
         />
       </Stack.Navigator>
     </NavigationContainer>
   );
-};
-
-export default App; 
+} 

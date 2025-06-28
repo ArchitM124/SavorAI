@@ -42,7 +42,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.title}>Recipe Finder</Text>
+        <Text style={styles.title}>Recipe AI</Text>
         <View style={styles.form}>
           <Text style={styles.label}>Enter Ingredients</Text>
           <TextInput

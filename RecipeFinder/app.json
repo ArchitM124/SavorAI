@@ -1,0 +1,61 @@
+{
+  "expo": {
+    "name": "Recipe AI",
+    "slug": "RecipeFinder",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "recipefinder",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "description": "AI-powered recipe finder that creates personalized meal plans based on your ingredients, fitness goals, and dietary preferences. Get instant recipe suggestions with nutritional information and cooking instructions.",
+    "keywords": ["recipe", "ai", "cooking", "meal planning", "fitness", "nutrition", "food", "diet"],
+    "primaryColor": "#007AFF",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.architm.recipeai",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true
+        }
+      },
+      "appStoreUrl": "https://apps.apple.com/app/recipe-ai/id[YOUR_APP_ID]"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.architm.recipeai",
+      "playStoreUrl": "https://play.google.com/store/apps/details?id=com.architm.recipeai"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "eb8ae904-5eeb-450f-a698-77b4b9d6e511"
+      }
+    }
+  }
+}

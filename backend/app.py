@@ -169,8 +169,35 @@ async def create_recipes(request: Request, data: RecipeRequest):
         if "ingredients" in str(e).lower() and not data.allow_extra_ingredients:
             # Try again allowing extra ingredients
             data.allow_extra_ingredients = True
-            return generate_recipes(data)
+            try:
+                result = generate_recipes(data)
+                return result
+            except Exception as e2:
+                raise HTTPException(status_code=500, detail=str(e2))
         raise
+
+@app.post("/recipes/more")
+async def get_more_recipes(request: Request, data: RecipeRequest):
+    client_ip = request.client.host
+    if not check_rate_limit(client_ip):
+        retry_after = int((rate_limits[client_ip]['hourly']['reset'] - datetime.now()).total_seconds())
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "error": "Rate limit exceeded",
+                "message": "Too many requests",
+                "retry_after": retry_after
+            }
+        )
+
+    try:
+        # For load more, always allow extra ingredients and request different recipes
+        data.allow_extra_ingredients = True
+        data.is_more = True
+        result = generate_recipes(data)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/rate-limit")
 async def get_rate_limit(request: Request):
