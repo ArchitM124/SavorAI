@@ -1,9 +1,11 @@
+import React from 'react';
 import { ScrollView, StyleSheet, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useState, useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 
 interface Nutrition {
   calories: number;
@@ -32,11 +34,21 @@ export default function FavoritesScreen() {
     loadFavorites();
   }, []);
 
+  // Reload favorites when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      loadFavorites();
+    }, [])
+  );
+
   const loadFavorites = async () => {
     try {
+      console.log('Loading favorites...');
       const storedRecipes = await AsyncStorage.getItem('favoriteRecipes');
+      console.log('Stored recipes:', storedRecipes);
       if (storedRecipes) {
         const recipes = JSON.parse(storedRecipes);
+        console.log('Parsed recipes:', recipes);
         setFavoriteRecipes(recipes);
       }
     } catch (error) {

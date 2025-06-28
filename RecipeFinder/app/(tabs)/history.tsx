@@ -1,10 +1,12 @@
-import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import React from 'react';
+import { ScrollView, StyleSheet, TouchableOpacity, View, Alert } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useState, useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 
 interface SearchHistory {
   id: string;
@@ -21,6 +23,13 @@ export default function HistoryScreen() {
     loadHistory();
   }, []);
 
+  // Reload history when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      loadHistory();
+    }, [])
+  );
+
   const loadHistory = async () => {
     try {
       const storedHistory = await AsyncStorage.getItem('searchHistory');
@@ -33,17 +42,56 @@ export default function HistoryScreen() {
   };
 
   const clearHistory = async () => {
+    Alert.alert(
+      'Clear All History',
+      'Are you sure you want to delete all search history?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear All',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await AsyncStorage.removeItem('searchHistory');
+              setSearchHistory([]);
+            } catch (error) {
+              console.error('Error clearing history:', error);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const deleteHistoryItem = async (itemId: string) => {
     try {
-      await AsyncStorage.removeItem('searchHistory');
-      setSearchHistory([]);
+      const updatedHistory = searchHistory.filter(item => item.id !== itemId);
+      setSearchHistory(updatedHistory);
+      await AsyncStorage.setItem('searchHistory', JSON.stringify(updatedHistory));
     } catch (error) {
-      console.error('Error clearing history:', error);
+      console.error('Error deleting history item:', error);
     }
   };
 
+  const confirmDeleteItem = (item: SearchHistory) => {
+    Alert.alert(
+      'Delete Search',
+      `Delete search for "${item.ingredients}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => deleteHistoryItem(item.id)
+        }
+      ]
+    );
+  };
+
   const repeatSearch = (historyItem: SearchHistory) => {
+    // Navigate to home screen with the search parameters
     router.push({
-      pathname: "/",
+      pathname: "/(tabs)",
       params: { 
         repeatSearch: JSON.stringify(historyItem)
       }
@@ -80,20 +128,32 @@ export default function HistoryScreen() {
           </View>
           
           {searchHistory.map((item, index) => (
-            <TouchableOpacity
-              key={item.id}
-              style={styles.historyItem}
-              onPress={() => repeatSearch(item)}
-            >
-              <View style={styles.historyContent}>
+            <View key={item.id} style={styles.historyItem}>
+              <TouchableOpacity
+                style={styles.historyContent}
+                onPress={() => repeatSearch(item)}
+              >
                 <ThemedText style={styles.ingredientsText}>{item.ingredients}</ThemedText>
                 <View style={styles.metaInfo}>
                   <ThemedText style={styles.metaText}>{item.fitnessGoal} • {item.mealType}</ThemedText>
                   <ThemedText style={styles.dateText}>{formatDate(item.timestamp)}</ThemedText>
                 </View>
+              </TouchableOpacity>
+              <View style={styles.actionButtons}>
+                <TouchableOpacity
+                  style={styles.repeatButton}
+                  onPress={() => repeatSearch(item)}
+                >
+                  <ThemedText style={styles.repeatIcon}>↻</ThemedText>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={() => confirmDeleteItem(item)}
+                >
+                  <ThemedText style={styles.deleteIcon}>🗑️</ThemedText>
+                </TouchableOpacity>
               </View>
-              <ThemedText style={styles.repeatIcon}>↻</ThemedText>
-            </TouchableOpacity>
+            </View>
           ))}
         </ThemedView>
       </ScrollView>
@@ -167,9 +227,27 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#999',
   },
+  actionButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  repeatButton: {
+    padding: 8,
+    borderRadius: 6,
+    backgroundColor: '#f0f0f0',
+  },
+  deleteButton: {
+    padding: 8,
+    borderRadius: 6,
+    backgroundColor: '#ffe6e6',
+  },
   repeatIcon: {
-    fontSize: 20,
+    fontSize: 18,
     color: '#007AFF',
-    marginLeft: 12,
+  },
+  deleteIcon: {
+    fontSize: 18,
+    color: '#FF6B6B',
   },
 }); 

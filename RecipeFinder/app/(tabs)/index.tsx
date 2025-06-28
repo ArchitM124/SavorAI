@@ -1,7 +1,7 @@
 import { StyleSheet, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { TextInput, ScrollView, TouchableOpacity, ActivityIndicator, View, Modal } from 'react-native';
 import { searchRecipes } from '@/src/api/config';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -28,6 +28,7 @@ export default function HomeScreen() {
     { name: '', amount: '', unit: '' }
   ]);
   const [isLoading, setIsLoading] = useState(false);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Handle repeat search from history
   useEffect(() => {
@@ -65,6 +66,18 @@ export default function HomeScreen() {
   };
   
   const handleSearch = async () => {
+    // Clear any existing timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    // Debounce the search to prevent rapid successive calls
+    searchTimeoutRef.current = setTimeout(async () => {
+      await performSearch();
+    }, 300); // 300ms delay
+  };
+
+  const performSearch = async () => {
     if (!fitnessGoal) {
       Alert.alert('Error', 'Please select a fitness goal');
       return;
@@ -123,6 +136,15 @@ export default function HomeScreen() {
       setIsLoading(false);
     }
   };
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const saveToHistory = async (ingredientsString: string, fitnessGoal: string, mealType: string) => {
     try {
@@ -215,11 +237,11 @@ export default function HomeScreen() {
               <View style={styles.labelContainer}>
                 <ThemedText style={[styles.inputLabel, styles.nameInputLabel]}>Required*</ThemedText>
               </View>
-              <View style={styles.labelContainer}>
-                <ThemedText style={[styles.inputLabel, styles.amountInputLabel]}>Optional</ThemedText>
+              <View style={[styles.labelContainer, styles.optionalLabelContainer]}>
+                <ThemedText style={[styles.inputLabel, styles.optionalInputLabel]}>Optional</ThemedText>
               </View>
-              <View style={styles.labelContainer}>
-                <ThemedText style={[styles.inputLabel, styles.unitInputLabel]}>Optional</ThemedText>
+              <View style={[styles.labelContainer, styles.optionalLabelContainer]}>
+                <ThemedText style={[styles.inputLabel, styles.optionalInputLabel]}>Optional</ThemedText>
               </View>
             </View>
             
@@ -347,15 +369,14 @@ const styles = StyleSheet.create({
     flex: 2,
     textAlign: 'left',
   },
-  amountInputLabel: {
+  optionalLabelContainer: {
     flex: 1,
-    textAlign: 'center',
-    marginLeft: 0,
+    alignItems: 'center',
   },
-  unitInputLabel: {
-    flex: 1,
+  optionalInputLabel: {
+    fontSize: 12,
+    color: '#666',
     textAlign: 'center',
-    marginLeft: 0,
   },
   subtitle: {
     fontSize: 14,

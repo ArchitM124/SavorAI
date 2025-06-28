@@ -1,3 +1,4 @@
+import React from 'react';
 import { useLocalSearchParams } from 'expo-router';
 import { ScrollView, StyleSheet, TouchableOpacity, View, ActivityIndicator, Alert } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
@@ -6,6 +7,7 @@ import { useState, useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { loadMoreRecipes } from '@/src/api/config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 
 interface Nutrition {
   calories: number;
@@ -54,6 +56,13 @@ export default function ResultsScreen() {
     loadFavorites();
   }, [recipes, hasExtraIngredients]);
 
+  // Reload favorites when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      loadFavorites();
+    }, [])
+  );
+
   const loadFavorites = async () => {
     try {
       const storedFavorites = await AsyncStorage.getItem('favorites');
@@ -76,13 +85,18 @@ export default function ResultsScreen() {
       const recipeKey = `${recipe.name}-${recipe.nutrition.calories}`;
       const newFavorites = new Set(favorites);
       
+      console.log('Toggling favorite for:', recipe.name);
+      console.log('Current favorites:', Array.from(favorites));
+      
       if (newFavorites.has(recipeKey)) {
+        console.log('Removing from favorites');
         newFavorites.delete(recipeKey);
         // Remove from favorite recipes
         const updatedFavoriteRecipes = favoriteRecipes.filter(r => `${r.name}-${r.nutrition.calories}` !== recipeKey);
         setFavoriteRecipes(updatedFavoriteRecipes);
         await AsyncStorage.setItem('favoriteRecipes', JSON.stringify(updatedFavoriteRecipes));
       } else {
+        console.log('Adding to favorites');
         newFavorites.add(recipeKey);
         // Add to favorite recipes
         const updatedFavoriteRecipes = [...favoriteRecipes, recipe];
@@ -92,6 +106,7 @@ export default function ResultsScreen() {
       
       setFavorites(newFavorites);
       await AsyncStorage.setItem('favorites', JSON.stringify([...newFavorites]));
+      console.log('Updated favorites:', Array.from(newFavorites));
     } catch (error) {
       console.error('Error saving favorite:', error);
     }

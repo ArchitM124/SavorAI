@@ -3,11 +3,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any, Union
 import openai
-from openai.openai_object import OpenAIObject
 from dotenv import load_dotenv
 import os
 import json
 from datetime import datetime, timedelta
+import hashlib
 
 # Load environment variables
 load_dotenv()
@@ -32,6 +32,9 @@ openai.api_key = os.getenv('OPENAI_API_KEY')
 # Rate limit tracking
 rate_limits: Dict[str, Dict[str, Any]] = {}
 
+# Simple cache for common ingredient combinations
+recipe_cache: Dict[str, Dict[str, Any]] = {}
+
 class Ingredient(BaseModel):
     name: str
     quantity: Optional[str] = None
@@ -44,6 +47,11 @@ class RecipeRequest(BaseModel):
     max_cooking_time: Optional[int] = None
     is_more: bool = False
     allow_extra_ingredients: bool = False
+
+def create_cache_key(data: RecipeRequest) -> str:
+    """Create a cache key for the request"""
+    ingredients_str = ",".join(sorted([ing.name.lower() for ing in data.ingredients]))
+    return hashlib.md5(f"{ingredients_str}_{data.fitness_goal}_{data.meal_type}_{data.allow_extra_ingredients}".encode()).hexdigest()
 
 def check_rate_limit(ip: str) -> bool:
     now = datetime.now()
@@ -71,76 +79,65 @@ def check_rate_limit(ip: str) -> bool:
 
 def generate_recipes(data: RecipeRequest) -> Dict[str, Any]:
     try:
+        # Check cache first
+        cache_key = create_cache_key(data)
+        if cache_key in recipe_cache and not data.is_more:
+            print(f"Cache hit for key: {cache_key}")
+            return recipe_cache[cache_key]
+
         # Format ingredients for prompt
-        ingredients_text = "\n".join([
-            f"- {ing.name}" + 
-            (f" ({ing.quantity} {ing.unit})" if ing.quantity and ing.unit else "")
-            for ing in data.ingredients
-        ])
+        ingredients_text = ", ".join([ing.name for ing in data.ingredients])
 
-        cooking_time_text = f"\nMaximum Cooking Time: {data.max_cooking_time} minutes" if data.max_cooking_time else ""
-        
-        extra_ingredients_text = ""
-        if data.allow_extra_ingredients:
-            extra_ingredients_text = "\nIMPORTANT: If you cannot create recipes with only the listed ingredients, you may suggest recipes that require up to 2-3 additional common ingredients. If you do this, clearly mark the additional required ingredients at the start of the recipe description."
-        elif data.is_more:
-            extra_ingredients_text = "\nIMPORTANT: Create different recipes than before, but using the same ingredients."
+        # Simplified prompt for faster response
+        prompt = f"""Create 3 healthy recipes for {data.fitness_goal or 'general fitness'} {data.meal_type or 'meal'} using: {ingredients_text}.
 
-        # Build the prompt
-        prompt = f"""As a professional chef and nutritionist, create 3 healthy recipes based on these requirements:
+Each recipe should include:
+- Name, description, ingredients, instructions
+- Nutrition: calories, protein, carbs, fats
+- Cooking time, prep time
+- How it supports the fitness goal
 
-Fitness Goal: {data.fitness_goal or 'Not specified'}
-Meal Type: {data.meal_type or 'Any'}{cooking_time_text}
+IMPORTANT: Use simple, descriptive recipe names without adjectives like "hearty", "energetic", "protein-packed", "delicious", etc. Just use the main ingredients and cooking method.
 
-Available Ingredients:
-{ingredients_text}
-(Basic ingredients like salt, pepper, oil, etc. are assumed available){extra_ingredients_text}
-
-For each recipe, provide:
-1. Recipe name
-2. Brief description
-3. Complete ingredients list with measurements
-4. Step-by-step instructions
-5. Nutritional information (calories, protein, carbs, fats)
-6. Brief explanation of how this recipe supports the fitness goal
-7. Total cooking time (including prep time)
-
-Return the response as a JSON array where each recipe has this exact structure:
+Return as JSON array with structure:
 {{
     "name": "Recipe Name",
     "description": "Brief description",
-    "ingredients": ["Ingredient 1 with amount", "Ingredient 2 with amount"],
-    "instructions": ["Step 1", "Step 2", "Step 3"],
-    "nutrition": {{
-        "calories": number,
-        "protein": number,
-        "carbs": number,
-        "fats": number
-    }},
-    "goal_alignment": "Explanation of how recipe supports fitness goal",
+    "ingredients": ["ingredient 1", "ingredient 2"],
+    "instructions": ["step 1", "step 2"],
+    "nutrition": {{"calories": number, "protein": number, "carbs": number, "fats": number}},
+    "goal_alignment": "fitness goal explanation",
     "cooking_time": number,
     "prep_time": number
-}}
+}}"""
 
-{"" if not data.max_cooking_time else f'IMPORTANT: Each recipe must take {data.max_cooking_time} minutes or less to prepare and cook.'}
-Ensure the response is a valid JSON array of exactly 3 recipes with the structure above."""
-
-        # Get completion from OpenAI
-        response: OpenAIObject = openai.ChatCompletion.create(
-            model="gpt-4",
+        # Use GPT-3.5-turbo for faster response
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",  # Faster than GPT-4
             messages=[
-                {"role": "system", "content": "You are a professional chef and nutritionist. Always respond with properly formatted JSON arrays containing exactly 3 recipes."},
+                {"role": "system", "content": "You are a chef. Return valid JSON with exactly 3 recipes."},
                 {"role": "user", "content": prompt}
             ],
-            temperature=0.7
+            temperature=0.7,
+            max_tokens=1500  # Limit response size for speed
         )
-
-        if not isinstance(response, OpenAIObject):
-            raise ValueError("Unexpected response type from OpenAI")
 
         content = response.choices[0].message.content
         recipes = json.loads(content)
-        return {"recipes": recipes, "has_extra_ingredients": data.allow_extra_ingredients}
+        
+        result = {"recipes": recipes, "has_extra_ingredients": data.allow_extra_ingredients}
+        
+        # Cache the result (only for non-load-more requests)
+        if not data.is_more:
+            recipe_cache[cache_key] = result
+            # Keep cache size manageable
+            if len(recipe_cache) > 100:
+                # Remove oldest entries
+                oldest_keys = list(recipe_cache.keys())[:20]
+                for key in oldest_keys:
+                    del recipe_cache[key]
+        
+        return result
 
     except json.JSONDecodeError as e:
         raise HTTPException(status_code=500, detail="Failed to parse recipe data")
@@ -149,7 +146,7 @@ Ensure the response is a valid JSON array of exactly 3 recipes with the structur
 
 @app.post("/recipes")
 async def create_recipes(request: Request, data: RecipeRequest):
-    client_ip = request.client.host
+    client_ip = getattr(request.client, 'host', 'unknown')
     if not check_rate_limit(client_ip):
         retry_after = int((rate_limits[client_ip]['hourly']['reset'] - datetime.now()).total_seconds())
         raise HTTPException(
@@ -178,7 +175,7 @@ async def create_recipes(request: Request, data: RecipeRequest):
 
 @app.post("/recipes/more")
 async def get_more_recipes(request: Request, data: RecipeRequest):
-    client_ip = request.client.host
+    client_ip = getattr(request.client, 'host', 'unknown')
     if not check_rate_limit(client_ip):
         retry_after = int((rate_limits[client_ip]['hourly']['reset'] - datetime.now()).total_seconds())
         raise HTTPException(
@@ -201,27 +198,24 @@ async def get_more_recipes(request: Request, data: RecipeRequest):
 
 @app.get("/rate-limit")
 async def get_rate_limit(request: Request):
-    client_ip = request.client.host
-    if client_ip not in rate_limits:
+    client_ip = getattr(request.client, 'host', 'unknown')
+    if client_ip in rate_limits:
         return {
-            "daily": {"remaining": 50, "reset_in": 86400},
-            "hourly": {"remaining": 5, "reset_in": 3600}
+            "daily_remaining": max(0, 50 - rate_limits[client_ip]['daily']['count']),
+            "hourly_remaining": max(0, 5 - rate_limits[client_ip]['hourly']['count']),
+            "daily_reset": rate_limits[client_ip]['daily']['reset'].isoformat(),
+            "hourly_reset": rate_limits[client_ip]['hourly']['reset'].isoformat()
         }
-    
-    now = datetime.now()
-    daily = rate_limits[client_ip]['daily']
-    hourly = rate_limits[client_ip]['hourly']
-    
     return {
-        "daily": {
-            "remaining": max(0, 50 - daily['count']),
-            "reset_in": int((daily['reset'] - now).total_seconds())
-        },
-        "hourly": {
-            "remaining": max(0, 5 - hourly['count']),
-            "reset_in": int((hourly['reset'] - now).total_seconds())
-        }
+        "daily_remaining": 50,
+        "hourly_remaining": 5,
+        "daily_reset": (datetime.now() + timedelta(days=1)).isoformat(),
+        "hourly_reset": (datetime.now() + timedelta(hours=1)).isoformat()
     }
+
+@app.get("/")
+async def root():
+    return {"message": "Recipe Finder API is running"}
 
 if __name__ == "__main__":
     import uvicorn
