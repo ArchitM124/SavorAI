@@ -67,9 +67,9 @@ def check_rate_limit(ip: str) -> bool:
     if now >= rate_limits[ip]['hourly']['reset']:
         rate_limits[ip]['hourly'] = {'count': 0, 'reset': now + timedelta(hours=1)}
     
-    # Check limits
-    if (rate_limits[ip]['daily']['count'] >= 50 or 
-        rate_limits[ip]['hourly']['count'] >= 5):
+    # Check limits - Much more generous for production
+    if (rate_limits[ip]['daily']['count'] >= 10000 or 
+        rate_limits[ip]['hourly']['count'] >= 1000):
         return False
     
     # Increment counters
@@ -115,15 +115,30 @@ Return as JSON array with structure:
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",  # Faster than GPT-4
             messages=[
-                {"role": "system", "content": "You are a chef. Return valid JSON with exactly 3 recipes."},
+                {"role": "system", "content": "You are a chef. You must return ONLY valid JSON with exactly 3 recipes. Do not include any text before or after the JSON."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.7,
             max_tokens=1500  # Limit response size for speed
         )
 
-        content = response.choices[0].message.content
-        recipes = json.loads(content)
+        content = response.choices[0].message.content.strip()
+        
+        # Try to extract JSON if there's extra text
+        try:
+            # First try direct parsing
+            recipes = json.loads(content)
+        except json.JSONDecodeError:
+            # Try to find JSON in the response
+            import re
+            json_match = re.search(r'\[.*\]', content, re.DOTALL)
+            if json_match:
+                try:
+                    recipes = json.loads(json_match.group())
+                except json.JSONDecodeError:
+                    raise HTTPException(status_code=500, detail="Failed to parse recipe data from OpenAI response")
+            else:
+                raise HTTPException(status_code=500, detail="No valid JSON found in OpenAI response")
         
         result = {"recipes": recipes, "has_extra_ingredients": data.allow_extra_ingredients}
         
@@ -146,18 +161,6 @@ Return as JSON array with structure:
 
 @app.post("/recipes")
 async def create_recipes(request: Request, data: RecipeRequest):
-    client_ip = getattr(request.client, 'host', 'unknown')
-    if not check_rate_limit(client_ip):
-        retry_after = int((rate_limits[client_ip]['hourly']['reset'] - datetime.now()).total_seconds())
-        raise HTTPException(
-            status_code=429,
-            detail={
-                "error": "Rate limit exceeded",
-                "message": "Too many requests",
-                "retry_after": retry_after
-            }
-        )
-
     try:
         # First try with exact ingredients
         result = generate_recipes(data)
@@ -175,18 +178,6 @@ async def create_recipes(request: Request, data: RecipeRequest):
 
 @app.post("/recipes/more")
 async def get_more_recipes(request: Request, data: RecipeRequest):
-    client_ip = getattr(request.client, 'host', 'unknown')
-    if not check_rate_limit(client_ip):
-        retry_after = int((rate_limits[client_ip]['hourly']['reset'] - datetime.now()).total_seconds())
-        raise HTTPException(
-            status_code=429,
-            detail={
-                "error": "Rate limit exceeded",
-                "message": "Too many requests",
-                "retry_after": retry_after
-            }
-        )
-
     try:
         # For load more, always allow extra ingredients and request different recipes
         data.allow_extra_ingredients = True
