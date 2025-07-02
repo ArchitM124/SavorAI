@@ -1,11 +1,9 @@
-import { StyleSheet, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { StyleSheet, Alert, KeyboardAvoidingView, Platform, TextInput, ScrollView, TouchableOpacity, ActivityIndicator, View, Modal } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useState, useEffect, useRef } from 'react';
-import { TextInput, ScrollView, TouchableOpacity, ActivityIndicator, View, Modal } from 'react-native';
-import { searchRecipes } from '@/src/api/config';
+import { searchRecipes, testServerConnection } from '@/src/api/config';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Picker } from '@react-native-picker/picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface Ingredient {
@@ -16,7 +14,6 @@ interface Ingredient {
 
 const FITNESS_GOALS = ['Bulking', 'Cutting', 'Maintenance', 'Weight Loss', 'Muscle Gain'];
 const MEAL_TYPES = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
-const UNITS = ['grams', 'kg', 'ml', 'L', 'cups', 'tbsp', 'tsp', 'pieces', 'oz', 'lbs'];
 
 export default function HomeScreen() {
   const { repeatSearch } = useLocalSearchParams();
@@ -47,6 +44,29 @@ export default function HomeScreen() {
       }
     }
   }, [repeatSearch]);
+
+  // Test server connection on app load
+  useEffect(() => {
+    testServerConnection();
+    
+    // Also test with native fetch
+    const testNativeFetch = async () => {
+      try {
+        console.log('Testing native fetch to:', 'http://18.216.74.132:8000');
+        const response = await fetch('http://18.216.74.132:8000', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        console.log('Native fetch response:', response.status, response.statusText);
+      } catch (error: any) {
+        console.error('Native fetch failed:', error?.message);
+      }
+    };
+    
+    testNativeFetch();
+  }, []);
 
   const addIngredient = () => {
     setIngredients([...ingredients, { name: '', amount: '', unit: '' }]);
@@ -127,7 +147,11 @@ export default function HomeScreen() {
 
       // Save to history
       await saveToHistory(formattedIngredients.join(', '), fitnessGoal, mealType);
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Search error in HomeScreen:', error);
+      console.error('Error message:', error?.message);
+      console.error('Error code:', error?.code);
+      
       Alert.alert(
         'Error',
         'Failed to fetch recipes. Please try again.'
@@ -181,7 +205,7 @@ export default function HomeScreen() {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
-        <ThemedText style={styles.title}>Recipe AI</ThemedText>
+        <ThemedText style={styles.title}>SavorAI</ThemedText>
         <ThemedView style={styles.content}>
           <ThemedView style={styles.section}>
             <ThemedText style={styles.label}>Select Fitness Goal</ThemedText>

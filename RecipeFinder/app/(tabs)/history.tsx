@@ -1,8 +1,7 @@
-import React from 'react';
 import { ScrollView, StyleSheet, TouchableOpacity, View, Alert } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
@@ -25,7 +24,7 @@ export default function HistoryScreen() {
 
   // Reload history when screen comes into focus
   useFocusEffect(
-    React.useCallback(() => {
+    useCallback(() => {
       loadHistory();
     }, [])
   );

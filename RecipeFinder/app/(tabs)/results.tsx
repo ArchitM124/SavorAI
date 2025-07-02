@@ -1,9 +1,8 @@
-import React from 'react';
 import { useLocalSearchParams } from 'expo-router';
 import { ScrollView, StyleSheet, TouchableOpacity, View, ActivityIndicator, Alert } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { loadMoreRecipes } from '@/src/api/config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -58,7 +57,7 @@ export default function ResultsScreen() {
 
   // Reload favorites when screen comes into focus
   useFocusEffect(
-    React.useCallback(() => {
+    useCallback(() => {
       loadFavorites();
     }, [])
   );
@@ -152,7 +151,7 @@ export default function ResultsScreen() {
         <ThemedView style={styles.content}>
           <ThemedText style={styles.title}>No Recipes Found</ThemedText>
           <ThemedText style={styles.subtitle}>
-            We couldn't find recipes with just those ingredients. Try adding a few more ingredients or we can suggest recipes with some additional common ingredients.
+            We couldn&apos;t find recipes with just those ingredients. Try adding a few more ingredients or we can suggest recipes with some additional common ingredients.
           </ThemedText>
         </ThemedView>
       </SafeAreaView>
@@ -163,7 +162,7 @@ export default function ResultsScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView}>
         <ThemedView style={styles.content}>
-          <ThemedText style={styles.title}>Recipe Results</ThemedText>
+          <ThemedText style={styles.title}>Results</ThemedText>
           
           {extraIngredientsUsed && (
             <ThemedView style={styles.extraIngredientsNotice}>

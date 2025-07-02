@@ -1,12 +1,13 @@
-import axios from 'axios';
+import axios, { isAxiosError } from 'axios';
 
-// Using localhost for iOS simulator/device
-const BASE_URL = 'http://localhost:8000';
-
+// Using ngrok HTTPS tunnel (temporary)
+const BASE_URL = 'https://1101-18-216-74-132.ngrok-free.app';
 const api = axios.create({
     baseURL: BASE_URL,
     headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'User-Agent': 'SavorAI/1.0.0'
     },
     timeout: 30000, // 30 second timeout
 });
@@ -48,34 +49,68 @@ export const searchRecipes = async (ingredients: string, fitnessGoal: string, me
                 return ingredient;
             });
 
-            console.log('Making request to:', `${BASE_URL}/recipes`);
-            console.log('Request payload:', {
+            const requestPayload = {
                 ingredients: ingredientsList,
                 fitness_goal: fitnessGoal,
                 meal_type: mealType,
                 allow_extra_ingredients: true
-            });
-
-            const response = await api.post('/recipes', {
-                ingredients: ingredientsList,
-                fitness_goal: fitnessGoal,
-                meal_type: mealType,
-                allow_extra_ingredients: true
-            });
-
-            console.log('Response:', response.data);
-            return {
-                recipes: response.data.recipes,
-                hasExtraIngredients: response.data.has_extra_ingredients || false
             };
-        } catch (error) {
+
+            console.log('Making request to:', `${BASE_URL}/recipes`);
+            console.log('Request payload:', requestPayload);
+
+            // Try native fetch first
+            console.log('Attempting native fetch...');
+            const fetchResponse = await fetch(`${BASE_URL}/recipes`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'User-Agent': 'SavorAI/1.0.0'
+                },
+                body: JSON.stringify(requestPayload)
+            });
+
+            console.log('Fetch response status:', fetchResponse.status);
+            console.log('Fetch response ok:', fetchResponse.ok);
+
+            if (!fetchResponse.ok) {
+                throw new Error(`HTTP ${fetchResponse.status}: ${fetchResponse.statusText}`);
+            }
+
+            const responseData = await fetchResponse.json();
+            console.log('Fetch response data:', responseData);
+
+            return {
+                recipes: responseData.recipes,
+                hasExtraIngredients: responseData.has_extra_ingredients || false
+            };
+        } catch (error: any) {
             console.error('Error searching recipes:', error);
-            if (axios.isAxiosError(error)) {
-                console.error('Request failed:', {
+            console.error('Error type:', typeof error);
+            console.error('Error constructor:', error?.constructor?.name);
+            console.error('Error message:', error?.message);
+            console.error('Error code:', error?.code);
+            
+            if (isAxiosError(error)) {
+                console.error('Axios error details:', {
                     status: error.response?.status,
                     statusText: error.response?.statusText,
                     data: error.response?.data,
-                    message: error.message
+                    message: error.message,
+                    code: error.code,
+                    config: {
+                        url: error.config?.url,
+                        method: error.config?.method,
+                        baseURL: error.config?.baseURL,
+                        headers: error.config?.headers
+                    }
+                });
+            } else {
+                console.error('Non-axios error:', {
+                    name: error?.name,
+                    message: error?.message,
+                    stack: error?.stack
                 });
             }
             throw error;
@@ -136,7 +171,7 @@ export const loadMoreRecipes = async (ingredients: string, fitnessGoal: string, 
             };
         } catch (error) {
             console.error('Error loading more recipes:', error);
-            if (axios.isAxiosError(error)) {
+            if (isAxiosError(error)) {
                 console.error('Load more request failed:', {
                     status: error.response?.status,
                     statusText: error.response?.statusText,
@@ -154,6 +189,38 @@ export const loadMoreRecipes = async (ingredients: string, fitnessGoal: string, 
     // Store the promise
     pendingRequests.set(requestKey, requestPromise);
     return await requestPromise;
+};
+
+// Test function to check if server is reachable
+export const testServerConnection = async () => {
+    try {
+        console.log('Testing server connection to:', BASE_URL);
+        
+        // Try native fetch to root endpoint
+        const response = await fetch(`${BASE_URL}/`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+        
+        console.log('Server test response status:', response.status);
+        console.log('Server test response ok:', response.ok);
+        
+        if (response.ok) {
+            const data = await response.text();
+            console.log('Server test response data:', data);
+            return true;
+        } else {
+            console.error('Server test failed with status:', response.status);
+            return false;
+        }
+    } catch (error: any) {
+        console.error('Server connection test failed:', error?.message);
+        console.error('Server connection test error type:', typeof error);
+        console.error('Server connection test error constructor:', error?.constructor?.name);
+        return false;
+    }
 };
 
 export default api; 

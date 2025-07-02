@@ -1,8 +1,7 @@
-import React from 'react';
 import { ScrollView, StyleSheet, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
@@ -36,7 +35,7 @@ export default function FavoritesScreen() {
 
   // Reload favorites when screen comes into focus
   useFocusEffect(
-    React.useCallback(() => {
+    useCallback(() => {
       loadFavorites();
     }, [])
   );
@@ -100,7 +99,7 @@ export default function FavoritesScreen() {
         <ThemedView style={styles.content}>
           <ThemedText style={styles.title}>Favorites</ThemedText>
           <ThemedText style={styles.subtitle}>
-            You haven't favorited any recipes yet. Start exploring recipes and tap the star to save your favorites!
+            You haven&apos;t favorited any recipes yet. Start exploring recipes and tap the star to save your favorites!
           </ThemedText>
         </ThemedView>
       </SafeAreaView>
