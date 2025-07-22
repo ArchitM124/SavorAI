@@ -1,4 +1,4 @@
-import { ScrollView, StyleSheet, TouchableOpacity, View, Alert } from 'react-native';
+import { ScrollView, StyleSheet, TouchableOpacity, View, Alert, useWindowDimensions } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useState, useEffect, useCallback } from 'react';
@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
+import { useHover } from '@/src/hooks/useHover';
 
 interface SearchHistory {
   id: string;
@@ -17,6 +18,8 @@ interface SearchHistory {
 
 export default function HistoryScreen() {
   const [searchHistory, setSearchHistory] = useState<SearchHistory[]>([]);
+  const { width } = useWindowDimensions();
+  const styles = getStyles(width);
 
   useEffect(() => {
     loadHistory();
@@ -126,41 +129,46 @@ export default function HistoryScreen() {
             </TouchableOpacity>
           </View>
           
-          {searchHistory.map((item, index) => (
-            <View key={item.id} style={styles.historyItem}>
-              <TouchableOpacity
-                style={styles.historyContent}
-                onPress={() => repeatSearch(item)}
-              >
-                <ThemedText style={styles.ingredientsText}>{item.ingredients}</ThemedText>
-                <View style={styles.metaInfo}>
-                  <ThemedText style={styles.metaText}>{item.fitnessGoal} • {item.mealType}</ThemedText>
-                  <ThemedText style={styles.dateText}>{formatDate(item.timestamp)}</ThemedText>
+          <View style={styles.historyGrid}>
+            {searchHistory.map((item, index) => {
+              const { hoverProps, isHovered } = useHover();
+              return (
+                <View key={item.id} style={[styles.historyItem, isHovered && styles.cardHover]} {...hoverProps}>
+                  <TouchableOpacity
+                    style={styles.historyContent}
+                    onPress={() => repeatSearch(item)}
+                  >
+                    <ThemedText style={styles.ingredientsText}>{item.ingredients}</ThemedText>
+                    <View style={styles.metaInfo}>
+                      <ThemedText style={styles.metaText}>{item.fitnessGoal} • {item.mealType}</ThemedText>
+                      <ThemedText style={styles.dateText}>{formatDate(item.timestamp)}</ThemedText>
+                    </View>
+                  </TouchableOpacity>
+                  <View style={styles.actionButtons}>
+                    <TouchableOpacity
+                      style={styles.repeatButton}
+                      onPress={() => repeatSearch(item)}
+                    >
+                      <ThemedText style={styles.repeatIcon}>↻</ThemedText>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.deleteButton}
+                      onPress={() => confirmDeleteItem(item)}
+                    >
+                      <ThemedText style={styles.deleteIcon}>🗑️</ThemedText>
+                    </TouchableOpacity>
+                  </View>
                 </View>
-              </TouchableOpacity>
-              <View style={styles.actionButtons}>
-                <TouchableOpacity
-                  style={styles.repeatButton}
-                  onPress={() => repeatSearch(item)}
-                >
-                  <ThemedText style={styles.repeatIcon}>↻</ThemedText>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.deleteButton}
-                  onPress={() => confirmDeleteItem(item)}
-                >
-                  <ThemedText style={styles.deleteIcon}>🗑️</ThemedText>
-                </TouchableOpacity>
-              </View>
-            </View>
-          ))}
+              );
+            })}
+          </View>
         </ThemedView>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (width: number) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -169,6 +177,9 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
+    width: '100%',
+    maxWidth: 1200,
+    alignSelf: 'center',
   },
   header: {
     flexDirection: 'row',
@@ -197,6 +208,11 @@ const styles = StyleSheet.create({
     marginTop: 10,
     color: '#666',
   },
+  historyGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
   historyItem: {
     backgroundColor: '#f5f5f5',
     borderRadius: 12,
@@ -204,6 +220,18 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
+    width: width > 768 ? '48%' : '100%',
+  },
+  cardHover: {
+    transform: [{ translateY: -5 }],
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.30,
+    shadowRadius: 4.65,
+    elevation: 8,
   },
   historyContent: {
     flex: 1,
@@ -249,4 +277,4 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#FF6B6B',
   },
-}); 
+});

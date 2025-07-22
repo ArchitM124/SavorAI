@@ -1,15 +1,15 @@
-import { StyleSheet, Alert, KeyboardAvoidingView, Platform, TextInput, ScrollView, TouchableOpacity, ActivityIndicator, View, Modal } from 'react-native';
+import { StyleSheet, Alert, KeyboardAvoidingView, Platform, TextInput, ScrollView, TouchableOpacity, ActivityIndicator, View, Modal, useWindowDimensions } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useState, useEffect, useRef } from 'react';
 import { searchRecipes, testServerConnection } from '@/src/api/config';
 import { router, useLocalSearchParams } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useHover } from '@/src/hooks/useHover';
 
 interface Ingredient {
   name: string;
   amount?: string;
-  unit?: string;
 }
 
 const FITNESS_GOALS = ['Bulking', 'Cutting', 'Maintenance', 'Weight Loss', 'Muscle Gain'];
@@ -20,13 +20,20 @@ export default function HomeScreen() {
   const [fitnessGoal, setFitnessGoal] = useState<string>('');
   const [mealType, setMealType] = useState<string>('');
   const [ingredients, setIngredients] = useState<Ingredient[]>([
-    { name: '', amount: '', unit: '' },
-    { name: '', amount: '', unit: '' },
-    { name: '', amount: '', unit: '' }
+    { name: '', amount: '' },
+    { name: '', amount: '' },
+    { name: '', amount: '' }
   ]);
   const [isLoading, setIsLoading] = useState(false);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  
+  const { width } = useWindowDimensions();
+  const isWeb = Platform.OS === 'web';
+  const styles = getStyles(width);
+
+  const { hoverProps: searchHoverProps, isHovered: isSearchHovered } = useHover();
+  const { hoverProps: addHoverProps, isHovered: isAddHovered } = useHover();
+
+
   // Handle repeat search from history
   useEffect(() => {
     if (repeatSearch) {
@@ -37,8 +44,8 @@ export default function HomeScreen() {
         
         // Parse ingredients from the saved string
         const ingredientNames = historyItem.ingredients.split(', ').map((ing: string) => ing.trim());
-        const newIngredients = ingredientNames.map((name: string) => ({ name, amount: '', unit: '' }));
-        setIngredients(newIngredients.length > 0 ? newIngredients : [{ name: '', amount: '', unit: '' }]);
+        const newIngredients = ingredientNames.map((name: string) => ({ name, amount: '' }));
+        setIngredients(newIngredients.length > 0 ? newIngredients : [{ name: '', amount: '' }]);
       } catch (error) {
         console.error('Error parsing repeat search:', error);
       }
@@ -52,8 +59,8 @@ export default function HomeScreen() {
     // Also test with native fetch
     const testNativeFetch = async () => {
       try {
-        console.log('Testing native fetch to:', 'http://18.216.74.132:8000');
-        const response = await fetch('http://18.216.74.132:8000', {
+        console.log('Testing native fetch to:', 'http://ec2-18-216-74-132.us-east-2.compute.amazonaws.com:8000');
+        const response = await fetch('http://ec2-18-216-74-132.us-east-2.compute.amazonaws.com:8000', {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -69,7 +76,7 @@ export default function HomeScreen() {
   }, []);
 
   const addIngredient = () => {
-    setIngredients([...ingredients, { name: '', amount: '', unit: '' }]);
+    setIngredients([...ingredients, { name: '', amount: '' }]);
   };
 
   const updateIngredient = (index: number, field: keyof Ingredient, value: string) => {
@@ -110,8 +117,8 @@ export default function HomeScreen() {
 
     // Filter and validate ingredients
     const validIngredients = ingredients.filter(ing => {
-      // If amount or unit is filled, name is required
-      if (ing.amount || ing.unit) {
+      // If amount is filled, name is required
+      if (ing.amount) {
         return ing.name.trim() !== '';
       }
       // Otherwise, include only if name is filled
@@ -127,8 +134,8 @@ export default function HomeScreen() {
     try {
       const formattedIngredients = validIngredients.map(ing => {
         const parts = [ing.name.trim()];
-        if (ing.amount && ing.unit) {
-          parts.unshift(`${ing.amount} ${ing.unit}`);
+        if (ing.amount) {
+          parts.unshift(`${ing.amount}`);
         }
         return parts.join(' ');
       });
@@ -205,73 +212,80 @@ export default function HomeScreen() {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
-        <ThemedText style={styles.title}>SavorAI</ThemedText>
         <ThemedView style={styles.content}>
-          <ThemedView style={styles.section}>
-            <ThemedText style={styles.label}>Select Fitness Goal</ThemedText>
-            <View style={styles.goalsContainer}>
-              {FITNESS_GOALS.map((goal) => (
-                <TouchableOpacity
-                  key={goal}
-                  style={[
-                    styles.goalButton,
-                    fitnessGoal === goal && styles.goalButtonSelected
-                  ]}
-                  onPress={() => setFitnessGoal(goal)}
-                >
-                  <ThemedText style={[
-                    styles.goalButtonText,
-                    fitnessGoal === goal && styles.goalButtonTextSelected
-                  ]}>
-                    {goal}
-                  </ThemedText>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </ThemedView>
+        <ThemedText style={styles.title}>SavorAI</ThemedText>
 
-          <ThemedView style={styles.section}>
-            <ThemedText style={styles.label}>Select Meal Type</ThemedText>
-            <View style={styles.goalsContainer}>
-              {MEAL_TYPES.map((meal) => (
-                <TouchableOpacity
-                  key={meal}
-                  style={[
-                    styles.goalButton,
-                    mealType === meal && styles.goalButtonSelected
-                  ]}
-                  onPress={() => setMealType(meal)}
-                >
-                  <ThemedText style={[
-                    styles.goalButtonText,
-                    mealType === meal && styles.goalButtonTextSelected
-                  ]}>
-                    {meal}
-                  </ThemedText>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </ThemedView>
+        <TouchableOpacity 
+            style={[styles.searchButton, isLoading && styles.buttonDisabled, isSearchHovered && styles.buttonHover]} 
+            onPress={handleSearch}
+            disabled={isLoading}
+            {...searchHoverProps}
+          >
+            {isLoading ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <ThemedText style={styles.buttonText}>Find Recipes</ThemedText>
+            )}
+          </TouchableOpacity>
 
-          <ThemedView style={styles.section}>
-            <ThemedText style={styles.label}>Ingredients</ThemedText>
-            <ThemedText style={styles.subtitle}>Basic ingredients like salt, pepper, oil, etc. are assumed available</ThemedText>
-            
-            <View style={styles.inputLabelsRow}>
-              <View style={styles.labelContainer}>
+          <View style={isWeb && width > 768 ? styles.formContainerWeb : styles.formContainerMobile}>
+            <ThemedView style={styles.section}>
+              <ThemedText style={styles.label}>Select Fitness Goal</ThemedText>
+              <View style={styles.goalsContainer}>
+                {FITNESS_GOALS.map((goal) => (
+                  <TouchableOpacity
+                    key={goal}
+                    style={[
+                      styles.goalButton,
+                      fitnessGoal === goal && styles.goalButtonSelected
+                    ]}
+                    onPress={() => setFitnessGoal(goal)}
+                  >
+                    <ThemedText style={[
+                      styles.goalButtonText,
+                      fitnessGoal === goal && styles.goalButtonTextSelected
+                    ]}>
+                      {goal}
+                    </ThemedText>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </ThemedView>
+
+            <ThemedView style={styles.section}>
+              <ThemedText style={styles.label}>Select Meal Type</ThemedText>
+              <View style={styles.goalsContainer}>
+                {MEAL_TYPES.map((meal) => (
+                  <TouchableOpacity
+                    key={meal}
+                    style={[
+                      styles.goalButton,
+                      mealType === meal && styles.goalButtonSelected
+                    ]}
+                    onPress={() => setMealType(meal)}
+                  >
+                    <ThemedText style={[
+                      styles.goalButtonText,
+                      mealType === meal && styles.goalButtonTextSelected
+                    ]}>
+                      {meal}
+                    </ThemedText>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </ThemedView>
+
+            <ThemedView style={styles.section}>
+              <ThemedText style={styles.label}>Ingredients</ThemedText>
+              <ThemedText style={styles.subtitle}>Basic ingredients like salt, pepper, oil, etc. are assumed available</ThemedText>
+              
+              <View style={styles.inputLabelsRow}>
                 <ThemedText style={[styles.inputLabel, styles.nameInputLabel]}>Required*</ThemedText>
+                <ThemedText style={[styles.inputLabel, styles.optionalInputLabel, { flex: 1, textAlign: 'center' }]}>Optional</ThemedText>
               </View>
-              <View style={[styles.labelContainer, styles.optionalLabelContainer]}>
-                <ThemedText style={[styles.inputLabel, styles.optionalInputLabel]}>Optional</ThemedText>
-              </View>
-              <View style={[styles.labelContainer, styles.optionalLabelContainer]}>
-                <ThemedText style={[styles.inputLabel, styles.optionalInputLabel]}>Optional</ThemedText>
-              </View>
-            </View>
-            
-            {ingredients.map((ingredient, index) => (
-              <View key={index} style={styles.ingredientContainer}>
-                <View style={styles.ingredientRow}>
+              
+              {ingredients.map((ingredient, index) => (
+                <View key={index} style={styles.ingredientContainer}>
                   <TextInput
                     style={[styles.input, styles.nameInput]}
                     value={ingredient.name}
@@ -289,47 +303,28 @@ export default function HomeScreen() {
                     keyboardType="numeric"
                     editable={!isLoading}
                   />
-                  <TextInput
-                    style={[styles.input, styles.unitInput]}
-                    value={ingredient.unit}
-                    onChangeText={(value) => updateIngredient(index, 'unit', value)}
-                    placeholder="Unit"
-                    placeholderTextColor="#666"
-                    editable={!isLoading}
-                  />
+                  {ingredients.length > 1 && (
+                    <TouchableOpacity
+                      style={styles.removeButton}
+                      onPress={() => removeIngredient(index)}
+                      disabled={isLoading}
+                    >
+                      <ThemedText style={styles.removeButtonText}>✕</ThemedText>
+                    </TouchableOpacity>
+                  )}
                 </View>
-                {ingredients.length > 1 && (
-                  <TouchableOpacity
-                    style={styles.removeButton}
-                    onPress={() => removeIngredient(index)}
-                    disabled={isLoading}
-                  >
-                    <ThemedText style={styles.removeButtonText}>✕</ThemedText>
-                  </TouchableOpacity>
-                )}
-              </View>
-            ))}
-            
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={addIngredient}
-              disabled={isLoading}
-            >
-              <ThemedText style={styles.addButtonText}>+ Add Another Ingredient</ThemedText>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={[styles.searchButton, isLoading && styles.buttonDisabled]} 
-              onPress={handleSearch}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <ActivityIndicator color="white" />
-              ) : (
-                <ThemedText style={styles.buttonText}>Find Recipes</ThemedText>
-              )}
-            </TouchableOpacity>
-          </ThemedView>
+              ))}
+              
+              <TouchableOpacity
+                style={[styles.addButton, isAddHovered && styles.buttonHover]}
+                onPress={addIngredient}
+                disabled={isLoading}
+                {...addHoverProps}
+              >
+                <ThemedText style={styles.addButtonText}>+ Add Another Ingredient</ThemedText>
+              </TouchableOpacity>
+            </ThemedView>
+          </View>
         </ThemedView>
       </ScrollView>
 
@@ -350,7 +345,7 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (width: number) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -359,11 +354,14 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 40,
+    paddingBottom: 40, // Reverted padding
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    alignItems: 'center',
   },
   content: {
     padding: 20,
+    width: '100%',
+    maxWidth: width > 768 ? 800 : '100%',
   },
   title: {
     fontSize: 28,
@@ -372,8 +370,15 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     paddingTop: 20,
   },
+  formContainerWeb: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  formContainerMobile: {},
   section: {
     marginBottom: 24,
+    width: width > 768 ? '48%' : '100%',
   },
   label: {
     fontSize: 18,
@@ -383,7 +388,8 @@ const styles = StyleSheet.create({
   inputLabelsRow: {
     flexDirection: 'row',
     marginBottom: 4,
-    paddingHorizontal: 4,
+    width: '100%', 
+    // Removed justifyContent: 'space-between'
   },
   inputLabel: {
     fontSize: 12,
@@ -392,12 +398,10 @@ const styles = StyleSheet.create({
   nameInputLabel: {
     flex: 2,
     textAlign: 'left',
-  },
-  optionalLabelContainer: {
-    flex: 1,
-    alignItems: 'center',
+    paddingLeft: 4, // Add padding to align with input
   },
   optionalInputLabel: {
+    flex: 1,
     fontSize: 12,
     color: '#666',
     textAlign: 'center',
@@ -434,6 +438,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
+    width: '100%', 
   },
   ingredientRow: {
     flex: 1,
@@ -456,9 +461,6 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 8,
   },
-  unitInput: {
-    flex: 1,
-  },
   removeButton: {
     padding: 8,
     marginLeft: 8,
@@ -474,6 +476,7 @@ const styles = StyleSheet.create({
     borderColor: '#007AFF',
     alignItems: 'center',
     marginTop: 8,
+    width: '100%', 
   },
   addButtonText: {
     color: '#007AFF',
@@ -485,9 +488,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     marginTop: 24,
+    width: '100%', 
   },
   buttonDisabled: {
     backgroundColor: '#007AFF80',
+  },
+  buttonHover: {
+    opacity: 0.8,
   },
   buttonText: {
     color: 'white',

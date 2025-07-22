@@ -1,7 +1,7 @@
 import axios, { isAxiosError } from 'axios';
 
 // Using ngrok HTTPS tunnel (temporary)
-const BASE_URL = 'https://1101-18-216-74-132.ngrok-free.app';
+const BASE_URL = 'http://ec2-18-216-74-132.us-east-2.compute.amazonaws.com:8000';
 const api = axios.create({
     baseURL: BASE_URL,
     headers: {

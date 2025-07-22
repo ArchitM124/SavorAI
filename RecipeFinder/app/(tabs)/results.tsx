@@ -1,5 +1,5 @@
 import { useLocalSearchParams } from 'expo-router';
-import { ScrollView, StyleSheet, TouchableOpacity, View, ActivityIndicator, Alert } from 'react-native';
+import { ScrollView, StyleSheet, TouchableOpacity, View, ActivityIndicator, Alert, useWindowDimensions } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useState, useEffect, useCallback } from 'react';
@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { loadMoreRecipes } from '@/src/api/config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
+import { useHover } from '@/src/hooks/useHover';
 
 interface Nutrition {
   calories: number;
@@ -35,7 +36,9 @@ export default function ResultsScreen() {
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [favoriteRecipes, setFavoriteRecipes] = useState<Recipe[]>([]);
   const [extraIngredientsUsed, setExtraIngredientsUsed] = useState(false);
-  
+  const { width } = useWindowDimensions();
+  const styles = getStyles(width);
+
   // Parse recipes and load favorites when component mounts
   useEffect(() => {
     try {
@@ -172,67 +175,73 @@ export default function ResultsScreen() {
             </ThemedView>
           )}
           
-          {allRecipes.map((recipe, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.recipeCard}
-              onPress={() => toggleRecipe(index)}
-            >
-              <View style={styles.recipeHeader}>
-                <ThemedText style={styles.recipeTitle}>{recipe.name}</ThemedText>
+          <View style={styles.recipeGrid}>
+            {allRecipes.map((recipe, index) => {
+              const { hoverProps, isHovered } = useHover();
+              return (
                 <TouchableOpacity
-                  style={styles.favoriteButton}
-                  onPress={() => toggleFavorite(recipe)}
+                  key={index}
+                  style={[styles.recipeCard, isHovered && styles.cardHover]}
+                  onPress={() => toggleRecipe(index)}
+                  {...hoverProps}
                 >
-                  <ThemedText style={styles.favoriteIcon}>
-                    {isFavorite(recipe) ? '❤️' : '🤍'}
-                  </ThemedText>
+                  <View style={styles.recipeHeader}>
+                    <ThemedText style={styles.recipeTitle}>{recipe.name}</ThemedText>
+                    <TouchableOpacity
+                      style={styles.favoriteButton}
+                      onPress={() => toggleFavorite(recipe)}
+                    >
+                      <ThemedText style={styles.favoriteIcon}>
+                        {isFavorite(recipe) ? '❤️' : '🤍'}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  </View>
+                  
+                  <View style={styles.macrosContainer}>
+                    <View style={styles.macroItem}>
+                      <ThemedText style={styles.macroLabel}>Calories</ThemedText>
+                      <ThemedText style={styles.macroValue}>{recipe.nutrition.calories}</ThemedText>
+                    </View>
+                    <View style={styles.macroItem}>
+                      <ThemedText style={styles.macroLabel}>Protein</ThemedText>
+                      <ThemedText style={styles.macroValue}>{recipe.nutrition.protein}g</ThemedText>
+                    </View>
+                    <View style={styles.macroItem}>
+                      <ThemedText style={styles.macroLabel}>Carbs</ThemedText>
+                      <ThemedText style={styles.macroValue}>{recipe.nutrition.carbs}g</ThemedText>
+                    </View>
+                    <View style={styles.macroItem}>
+                      <ThemedText style={styles.macroLabel}>Fats</ThemedText>
+                      <ThemedText style={styles.macroValue}>{recipe.nutrition.fats}g</ThemedText>
+                    </View>
+                  </View>
+
+                  {expandedRecipe === index && (
+                    <View style={styles.recipeDetails}>
+                      <ThemedText style={styles.description}>{recipe.description}</ThemedText>
+                      
+                      <ThemedText style={styles.sectionTitle}>Ingredients:</ThemedText>
+                      {recipe.ingredients.map((ingredient, idx) => (
+                        <ThemedText key={idx} style={styles.listItem}>• {ingredient}</ThemedText>
+                      ))}
+                      
+                      <ThemedText style={styles.sectionTitle}>Instructions:</ThemedText>
+                      {recipe.instructions.map((instruction, idx) => (
+                        <ThemedText key={idx} style={styles.listItem}>{idx + 1}. {instruction}</ThemedText>
+                      ))}
+
+                      <ThemedText style={styles.sectionTitle}>Fitness Goal Alignment:</ThemedText>
+                      <ThemedText style={styles.listItem}>{recipe.goal_alignment}</ThemedText>
+
+                      <ThemedText style={styles.sectionTitle}>Time:</ThemedText>
+                      <ThemedText style={styles.listItem}>Prep Time: {recipe.prep_time} minutes</ThemedText>
+                      <ThemedText style={styles.listItem}>Cooking Time: {recipe.cooking_time} minutes</ThemedText>
+                    </View>
+                  )}
                 </TouchableOpacity>
-              </View>
-              
-              <View style={styles.macrosContainer}>
-                <View style={styles.macroItem}>
-                  <ThemedText style={styles.macroLabel}>Calories</ThemedText>
-                  <ThemedText style={styles.macroValue}>{recipe.nutrition.calories}</ThemedText>
-                </View>
-                <View style={styles.macroItem}>
-                  <ThemedText style={styles.macroLabel}>Protein</ThemedText>
-                  <ThemedText style={styles.macroValue}>{recipe.nutrition.protein}g</ThemedText>
-                </View>
-                <View style={styles.macroItem}>
-                  <ThemedText style={styles.macroLabel}>Carbs</ThemedText>
-                  <ThemedText style={styles.macroValue}>{recipe.nutrition.carbs}g</ThemedText>
-                </View>
-                <View style={styles.macroItem}>
-                  <ThemedText style={styles.macroLabel}>Fats</ThemedText>
-                  <ThemedText style={styles.macroValue}>{recipe.nutrition.fats}g</ThemedText>
-                </View>
-              </View>
-
-              {expandedRecipe === index && (
-                <View style={styles.recipeDetails}>
-                  <ThemedText style={styles.description}>{recipe.description}</ThemedText>
-                  
-                  <ThemedText style={styles.sectionTitle}>Ingredients:</ThemedText>
-                  {recipe.ingredients.map((ingredient, idx) => (
-                    <ThemedText key={idx} style={styles.listItem}>• {ingredient}</ThemedText>
-                  ))}
-                  
-                  <ThemedText style={styles.sectionTitle}>Instructions:</ThemedText>
-                  {recipe.instructions.map((instruction, idx) => (
-                    <ThemedText key={idx} style={styles.listItem}>{idx + 1}. {instruction}</ThemedText>
-                  ))}
-
-                  <ThemedText style={styles.sectionTitle}>Fitness Goal Alignment:</ThemedText>
-                  <ThemedText style={styles.listItem}>{recipe.goal_alignment}</ThemedText>
-
-                  <ThemedText style={styles.sectionTitle}>Time:</ThemedText>
-                  <ThemedText style={styles.listItem}>Prep Time: {recipe.prep_time} minutes</ThemedText>
-                  <ThemedText style={styles.listItem}>Cooking Time: {recipe.cooking_time} minutes</ThemedText>
-                </View>
-              )}
-            </TouchableOpacity>
-          ))}
+              );
+            })}
+          </View>
 
           {hasMoreRecipes && (
             <TouchableOpacity
@@ -256,7 +265,7 @@ export default function ResultsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (width: number) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -265,6 +274,9 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
+    width: '100%',
+    maxWidth: 1200,
+    alignSelf: 'center',
   },
   title: {
     fontSize: 24,
@@ -278,11 +290,28 @@ const styles = StyleSheet.create({
     marginTop: 10,
     color: '#666',
   },
+  recipeGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
   recipeCard: {
     backgroundColor: '#f5f5f5',
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
+    width: width > 768 ? '48%' : '100%',
+  },
+  cardHover: {
+    transform: [{ translateY: -5 }],
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.30,
+    shadowRadius: 4.65,
+    elevation: 8,
   },
   recipeHeader: {
     flexDirection: 'row',
@@ -370,4 +399,4 @@ const styles = StyleSheet.create({
   favoriteIcon: {
     fontSize: 20,
   },
-}); 
+});
